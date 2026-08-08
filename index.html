@@ -129,8 +129,14 @@ function renderFrame() {
 function prepareSending(isAuto = false) {
     if(!isAuto) clearInterval(state.timer);
     const text = document.getElementById('inputText').value;
-    let b64 = state.rawData || (text ? btoa(unescape(encodeURIComponent(text))) : "");
-    if (!b64) return isAuto ? null : alert("请先输入内容或选择文件");
+    let b64 = state.rawData;
+    if (!b64 && text !== "") {
+        b64 = btoa(unescape(encodeURIComponent(text)));
+        state.fileName = "note_" + Date.now().toString().slice(-4) + ".txt";
+    }
+    if (b64 === null && text === "") return isAuto ? null : alert("请先输入内容或选择文件");
+    if (b64 === "") b64 = ""; // 空文件/空文本
+    
     if(!isAuto) {
         state.tid = Math.random().toString(36).substring(2, 5).toUpperCase();
         state.frameIdx = 0;
@@ -138,8 +144,12 @@ function prepareSending(isAuto = false) {
     state.fileName = state.fileName || "unnamed_file.txt";
     state.chunks = [];
     const size = parseInt(state.chunkSize);
-    for (let i = 0; i < b64.length; i += size) {
-        state.chunks.push(b64.substring(i, i + size));
+    if (b64.length === 0) {
+        state.chunks.push("");
+    } else {
+        for (let i = 0; i < b64.length; i += size) {
+            state.chunks.push(b64.substring(i, i + size));
+        }
     }
     state.isSending = true;
     document.getElementById('playerBox').classList.remove('hidden');
@@ -304,7 +314,7 @@ function requestFrame(i) { if(state.isSending) { state.frameIdx = i; state.isPau
 function manualSeek(val) { state.frameIdx = parseInt(val); state.isPaused = true; renderFrame(); }
 function step(d) { state.isPaused = true; state.frameIdx = (state.frameIdx + d + state.chunks.length) % state.chunks.length; renderFrame(); }
 function togglePause() { state.isPaused = !state.isPaused; }
-function resetFile() { state.rawData = null; state.fileName = ""; document.getElementById('fileCard').classList.add('hidden'); }
+function resetFile() { state.rawData = null; state.fileName = ""; document.getElementById('fileCard').classList.add('hidden'); document.getElementById('fileInput').value = ""; }
 
 document.getElementById('fileInput').onchange = (e) => {
     const f = e.target.files[0]; if(!f) return;
@@ -312,7 +322,10 @@ document.getElementById('fileInput').onchange = (e) => {
     const r = new FileReader();
     r.onload = (ev) => {
         let bin = new Uint8Array(ev.target.result);
-        let s = ''; for(let i=0; i<bin.length; i++) s += String.fromCharCode(bin[i]);
+        let s = ''; 
+        for (let i = 0; i < bin.length; i += 8192) {
+            s += String.fromCharCode.apply(null, bin.subarray(i, i + 8192));
+        }
         state.rawData = btoa(s);
         document.getElementById('f-name').innerText = f.name;
         document.getElementById('fileCard').classList.remove('hidden');
