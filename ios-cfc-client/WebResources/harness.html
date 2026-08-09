@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CFC Receiver</title>
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#0f172a;overflow:hidden;
+    font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent;}
+  #video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
+  .crosshair{position:absolute;width:20%;height:20%;border:4px solid rgba(255,255,255,.6);pointer-events:none;z-index:5;}
+  .crosshair.tl{top:15%;left:15%;border-right:none;border-bottom:none;}
+  .crosshair.br{bottom:15%;right:15%;border-left:none;border-top:none;}
+  .crosshair.active{border-color:#10b981;box-shadow:0 0 20px rgba(16,185,129,.5);}
+  .crosshair.scanning{border-color:#fbbf24;}
+  #overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;background:rgba(15,23,42,.72);z-index:20;color:#e2e8f0;text-align:center;padding:24px;box-sizing:border-box;}
+  #startBtn{padding:16px 34px;border:none;border-radius:16px;background:#3b82f6;color:#fff;
+    font-size:17px;font-weight:700;box-shadow:0 8px 24px rgba(59,130,246,.4);}
+  #status{position:absolute;left:0;right:0;bottom:0;z-index:15;padding:8px 12px;
+    font-size:11px;color:#94a3b8;font-family:ui-monospace,monospace;background:rgba(15,23,42,.4);pointer-events:none;}
+</style>
+</head>
+<body>
+  <!-- 相机预览与取景框 -->
+  <video id="video" autoplay playsinline muted></video>
+  <div id="crosshair1" class="crosshair tl"></div>
+  <div id="crosshair2" class="crosshair br"></div>
+
+  <!-- 启动遮罩（自动启动失败时兜底） -->
+  <div id="overlay">
+    <div id="overlayText" style="font-size:15px;font-weight:600;">正在启动解码引擎…</div>
+    <button id="startBtn" style="display:none;">📷 开始接收</button>
+  </div>
+
+  <div id="status"></div>
+
+  <!-- recv.js 运行所需的隐藏 DOM（与 cimbar-transfer.html 保持一致） -->
+  <div id="framesInFlight" style="display:none;">0</div>
+  <div id="t0" style="display:none;"></div>
+  <div id="t1" style="display:none;"></div>
+  <div id="t2" style="display:none;"></div>
+  <div id="t3" style="display:none;"></div>
+  <div id="tdec" style="display:none;"></div>
+  <div id="errorbox" style="display:none;"></div>
+  <div id="progress_bars" style="display:none;"><div class="progress"></div></div>
+  <div id="nav-container" class="mode-auto" style="display:none;"><a id="mode-val" href="javascript:void(0)">B</a></div>
+  <div id="nav-button" style="display:none;"></div>
+  <div id="nav-content" style="display:none;"></div>
+  <div id="debug-button" style="display:none;"></div>
+
+<script>
+  // ============ 原生桥 ============
+  function postNative(name, obj){
+    try { if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers[name])
+            window.webkit.messageHandlers[name].postMessage(obj); } catch(e){}
+  }
+  function setStatus(msg){ var s=document.getElementById('status'); if(s) s.textContent = msg; }
+
+  // 捕获 JS 运行期错误并回传原生，便于定位 wasm/解码异常
+  window.addEventListener('error', function(e){
+    setStatus('JS 错误：'+e.message);
+    postNative('jslog', {level:'error', msg:'Uncaught '+e.message+' @'+(e.filename||'')+':'+(e.lineno||'')});
+  });
+
+  // ============ WASM Module（必须在 cimbar_js.js 之前定义） ============
+  var Module = {};
+  Module.onRuntimeInitialized = function(){
+    console.log('[harness] wasm ready');
+    setStatus('WASM 已就绪，初始化 Worker…');
+    try { boot(); } catch(e){ console.error('[harness] boot error', e); showStartButton('初始化失败：'+e.message); }
+  };
+
+  var _started = false;
+  async function boot(){
+    if (_started) return; _started = true;
+
+    // 解码 Worker 数量：真机内存吃紧可降到 2
+    var NUM_WORKERS = 3;
+    Recv.init_ww(NUM_WORKERS);
+
+    // 劫持进度：回传原生 HUD（对齐网页端 render_progress）
+    var origRender = Recv.render_progress;
+    Recv.render_progress = function(report){
+      try { origRender.call(Recv, report); } catch(e){}
+      if (Array.isArray(report) && report.length){
+        var avg = Math.min(1.0, report.reduce(function(a,b){return a+b;},0)/report.length);
+        postNative('progress', { percent: Math.round(avg*100), streams: report.length });
+      }
+    };
+
+    // 劫持最终下载：把文件交给原生，而不是触发浏览器下载
+    Zstd.download_blob = function(name, blob){
+      setStatus('文件就绪：'+name+'（'+blob.size+' 字节），回传原生…');
+      postNative('fileMeta', { name: name, size: blob.size });
+      blob.arrayBuffer().then(function(ab){
+        var u8 = new Uint8Array(ab);
+        var bin = ''; var CH = 0x8000;
+        for (var i=0;i<u8.length;i+=CH){
+          bin += String.fromCharCode.apply(null, u8.subarray(i, i+CH));
+        }
+        postNative('fileComplete', { name: name, size: blob.size, data: btoa(bin) });
+      });
+    };
+
+    await Recv.ww_ready;
+    console.log('[harness] workers ready, allocate sink');
+    if (typeof Sink !== 'undefined') Sink.allocate();
+
+    startCamera();
+  }
+
+  function startCamera(){
+    try {
+      Recv.init_video(document.getElementById('video'));
+      console.log('[harness] init_video ok');
+      hideOverlay();
+      setStatus('相机已启动，正在扫描…');
+      // 通知原生侧隐藏加载提示
+      postNative('cameraStarted', {});
+    } catch(e){
+      console.error('[harness] init_video failed', e);
+      showStartButton('无法启动相机：'+e.message);
+    }
+  }
+
+  function hideOverlay(){ var o=document.getElementById('overlay'); if(o) o.style.display='none'; }
+  function showStartButton(msg){
+    var o=document.getElementById('overlay');
+    var t=document.getElementById('overlayText');
+    var b=document.getElementById('startBtn');
+    if(t) t.textContent = msg || '点击开始接收';
+    if(b) b.style.display='inline-block';
+    if(o) o.style.display='flex';
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    var b=document.getElementById('startBtn');
+    if(b) b.addEventListener('click', function(){ _started=false; hideOverlay(); boot(); });
+  });
+
+  // 若 5 秒内 wasm 仍未就绪，提示用户
+  setTimeout(function(){
+    if(!_started){ setStatus('引擎加载较慢…'); }
+  }, 5000);
+</script>
+
+<script src="cimbar-deps/cimbar_js.2026-01-20T0312.js"></script>
+<script src="cimbar-deps/zstd.2026-01-20T0312.js"></script>
+<script src="cimbar-deps/recv.2026-01-20T0312.js"></script>
+</body>
+</html>

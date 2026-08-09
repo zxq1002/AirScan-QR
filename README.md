@@ -79,6 +79,15 @@
 
 ### 🚀 高速专业版（需本地 HTTPS Server & WASM 依赖）
 5. [cimbar-transfer.html](cimbar-transfer.html): Cimbar 矩阵色码版（参考 libcimbar / CFC 实现），采用高密度 4-Color 图标矩阵 + WebAssembly 解码 + Zstd 压缩，1MB 文件仅需约 40 秒传输完成。相关说明参见 [CIMBAR-TRANSFER-README.md](CIMBAR-TRANSFER-README.md)。
+6. [ios-cfc-client/](ios-cfc-client/): 原生 iPhone (iOS) Cimbar/CFC 接收端客户端项目。v1.2.0 已通过 WKWebView 内嵌 cimbar WASM 落地真实解码（与网页端同源），并保留 AVFoundation 原生捕获骨架以备路线 A 提速。源码、构建说明、功能对齐分析与路线 B 实现记录参见 [ios-cfc-client/README.md](ios-cfc-client/README.md)、[ALIGNMENT-ANALYSIS.md](ios-cfc-client/ALIGNMENT-ANALYSIS.md) 及 [WASM-REUSE-FEASIBILITY.md](ios-cfc-client/WASM-REUSE-FEASIBILITY.md)。
+
+## 🗒 更新记录
+
+| 日期 | 模块 | 概要 |
+|------|------|------|
+| 2026-08-09 | ios-cfc-client v1.2.0 | 路线 B 落地：WKWebView 内嵌 cimbar WASM 接收端（本地 HTTP 服务 + harness.html），模拟器验证 wasm→Workers→相机授权全链路，解码与网页端同源。详见 [WASM-REUSE-FEASIBILITY.md](ios-cfc-client/WASM-REUSE-FEASIBILITY.md) |
+| 2026-08-09 | ios-cfc-client v1.1.0 | 对照网页端接收链路完成控制面对齐（计时/看门狗/背压/模式自动识别/重置/补光灯）；移除伪造解码逻辑；明确真实解码引擎（libcimbar）接入点。详见 [ios-cfc-client/ALIGNMENT-ANALYSIS.md](ios-cfc-client/ALIGNMENT-ANALYSIS.md) |
+| 2026-08-08 | ios-cfc-client v1.0.0 | 新增原生 iPhone (iOS) Cimbar/CFC 接收端客户端模块 |
 
 ## 📜 许可证
 
