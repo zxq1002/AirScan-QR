@@ -7,141 +7,195 @@
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0f172a;overflow:hidden;
     font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent;}
+  /* 视频全屏 */
   #video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
-  .crosshair{position:absolute;width:20%;height:20%;border:4px solid rgba(255,255,255,.6);pointer-events:none;z-index:5;}
+  /* 取景框十字 */
+  .crosshair{position:absolute;width:20%;height:20%;border:4px solid rgba(255,255,255,.5);pointer-events:none;z-index:5;}
   .crosshair.tl{top:15%;left:15%;border-right:none;border-bottom:none;}
   .crosshair.br{bottom:15%;right:15%;border-left:none;border-top:none;}
-  .crosshair.active{border-color:#10b981;box-shadow:0 0 20px rgba(16,185,129,.5);}
-  .crosshair.scanning{border-color:#fbbf24;}
+
+  /* ─── 顶部 HUD：进度 / 模式 / 计时 / 文件名 ─── */
+  #hud{position:absolute;top:env(safe-area-inset-top,0px);left:0;right:0;z-index:20;padding:10px 14px 12px;
+    background:linear-gradient(rgba(15,23,42,.88),rgba(15,23,42,.0));color:#e2e8f0;transition:opacity .3s;}
+  #hudTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+  #hudTitle{font-size:13px;font-weight:800;color:#60a5fa;letter-spacing:.3px;}
+  #hudRight{display:flex;gap:10px;align-items:center;}
+  #hudTimer{font-size:12px;font-family:ui-monospace,monospace;font-weight:700;color:#93c5fd;}
+  #hudMode{font-size:10px;font-family:ui-monospace,monospace;font-weight:700;color:#c084fc;padding:2px 8px;
+    background:rgba(192,132,252,0.15);border-radius:6px;display:none;}
+  #hudPercent{font-size:17px;font-family:ui-monospace,monospace;font-weight:800;color:#34d399;}
+  /* 进度条 */
+  #hudBar{width:100%;height:6px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden;margin:6px 0;}
+  #hudBarFill{height:100%;background:linear-gradient(90deg,#3b82f6,#10b981);width:0%;
+    border-radius:3px;transition:width .2s;}
+  /* 文件名 & 状态 */
+  #hudFileName{font-size:11px;color:#cbd5e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none;}
+  #hudStatus{font-size:10px;color:#94a3b8;margin-top:2px;}
+
+  /* 启动遮罩 */
   #overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:14px;background:rgba(15,23,42,.72);z-index:20;color:#e2e8f0;text-align:center;padding:24px;box-sizing:border-box;}
+    gap:14px;background:rgba(15,23,42,.78);z-index:30;color:#e2e8f0;text-align:center;padding:24px;box-sizing:border-box;}
   #startBtn{padding:16px 34px;border:none;border-radius:16px;background:#3b82f6;color:#fff;
-    font-size:17px;font-weight:700;box-shadow:0 8px 24px rgba(59,130,246,.4);}
-  #status{position:absolute;left:0;right:0;bottom:0;z-index:15;padding:8px 12px;
-    font-size:11px;color:#94a3b8;font-family:ui-monospace,monospace;background:rgba(15,23,42,.4);pointer-events:none;}
+    font-size:17px;font-weight:700;box-shadow:0 8px 24px rgba(59,130,246,.4);cursor:pointer;}
+  #startBtn:active{opacity:.8;}
+  #overlayText{font-size:15px;font-weight:600;}
 </style>
 </head>
 <body>
-  <!-- 相机预览与取景框 -->
   <video id="video" autoplay playsinline muted></video>
   <div id="crosshair1" class="crosshair tl"></div>
   <div id="crosshair2" class="crosshair br"></div>
 
-  <!-- 启动遮罩（自动启动失败时兜底） -->
+  <!-- ═══ 靠内的实时 HUD ═══ -->
+  <div id="hud" style="opacity:0">
+    <div id="hudTop"><span id="hudTitle">CFC 扫码接收</span>
+      <div id="hudRight"><span id="hudTimer">⏱ 00:00</span><span id="hudMode"></span></div>
+    </div>
+    <div id="hudBar"><div id="hudBarFill"></div></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <span id="hudFileName"></span><span id="hudPercent">0%</span>
+    </div>
+    <div id="hudStatus">📷 准备中…</div>
+  </div>
+
+  <!-- 启动遮罩 -->
   <div id="overlay">
-    <div id="overlayText" style="font-size:15px;font-weight:600;">正在启动解码引擎…</div>
+    <div id="overlayText">正在启动解码引擎…</div>
     <button id="startBtn" style="display:none;">📷 开始接收</button>
   </div>
 
-  <div id="status"></div>
-
-  <!-- recv.js 运行所需的隐藏 DOM（与 cimbar-transfer.html 保持一致） -->
+  <!-- recv.js 隐藏 DOM -->
   <div id="framesInFlight" style="display:none;">0</div>
-  <div id="t0" style="display:none;"></div>
-  <div id="t1" style="display:none;"></div>
-  <div id="t2" style="display:none;"></div>
-  <div id="t3" style="display:none;"></div>
-  <div id="tdec" style="display:none;"></div>
-  <div id="errorbox" style="display:none;"></div>
+  <div id="t0" style="display:none;"></div><div id="t1" style="display:none;"></div>
+  <div id="t2" style="display:none;"></div><div id="t3" style="display:none;"></div>
+  <div id="tdec" style="display:none;"></div><div id="errorbox" style="display:none;"></div>
   <div id="progress_bars" style="display:none;"><div class="progress"></div></div>
   <div id="nav-container" class="mode-auto" style="display:none;"><a id="mode-val" href="javascript:void(0)">B</a></div>
-  <div id="nav-button" style="display:none;"></div>
-  <div id="nav-content" style="display:none;"></div>
+  <div id="nav-button" style="display:none;"></div><div id="nav-content" style="display:none;"></div>
   <div id="debug-button" style="display:none;"></div>
 
 <script>
-  // ============ 原生桥 ============
+  // ============ 原生桥（兜底：供原生 HUD 轮询 / 最终文件回传） ============
   function postNative(name, obj){
-    try { if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers[name])
-            window.webkit.messageHandlers[name].postMessage(obj); } catch(e){}
+    try{ if(window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers[name])
+           window.webkit.messageHandlers[name].postMessage(obj); }catch(e){}
   }
-  function setStatus(msg){ var s=document.getElementById('status'); if(s) s.textContent = msg; }
 
-  // 捕获 JS 运行期错误并回传原生，便于定位 wasm/解码异常
-  window.addEventListener('error', function(e){
-    setStatus('JS 错误：'+e.message);
-    postNative('jslog', {level:'error', msg:'Uncaught '+e.message+' @'+(e.filename||'')+':'+(e.lineno||'')});
-  });
+  // ============ 内 HUD（实时，不依赖原生桥） ============
+  var HUD={percent:0, streams:0, mode:'', fileName:'', status:'', timerSec:0, timerActive:false, timerId:null};
+  var $=function(id){return document.getElementById(id);};
 
-  // ============ WASM Module（必须在 cimbar_js.js 之前定义） ============
+  function setPercent(p, streams){
+    HUD.percent=p; HUD.streams=streams;
+    $('hudPercent').textContent=p+'%';
+    $('hudBarFill').style.width=p+'%';
+  }
+  function setMode(m){ HUD.mode=m; var e=$('hudMode'); e.textContent='模式:'+m; e.style.display=m?'inline-block':'none'; }
+  function setFileName(n){ HUD.fileName=n; var e=$('hudFileName'); e.textContent=n; e.style.display=n?'block':'none'; }
+  function setHUDStatus(s){ HUD.status=s; $('hudStatus').textContent=s; }
+
+  function startTimer(){
+    if(HUD.timerActive) return; HUD.timerActive=true; HUD.timerSec=0;
+    var e=$('hudTimer');
+    HUD.timerId=setInterval(function(){
+      HUD.timerSec++; var m=Math.floor(HUD.timerSec/60),s=HUD.timerSec%60;
+      e.textContent='⏱ '+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+    },1000);
+  }
+  function stopTimer(){ if(HUD.timerId){clearInterval(HUD.timerId);HUD.timerId=null;} HUD.timerActive=false; }
+
+  // 把当前进度同步给原生（供弱更新时的兜底）
+  function syncToNative(){
+    postNative('progress',{percent:HUD.percent,streams:HUD.streams});
+    postNative('status',{status:HUD.status,mode:HUD.mode,fileName:HUD.fileName,timerSec:HUD.timerSec});
+  }
+
+  // ============ WASM Module ============
   var Module = {};
   Module.onRuntimeInitialized = function(){
     console.log('[harness] wasm ready');
-    setStatus('WASM 已就绪，初始化 Worker…');
-    try { boot(); } catch(e){ console.error('[harness] boot error', e); showStartButton('初始化失败：'+e.message); }
+    setHUDStatus('WASM 已就绪，初始化 Worker…');
+    try{ boot(); }catch(e){ console.error('[harness] boot error',e); showStartButton('初始化失败：'+e.message); }
   };
 
-  var _started = false;
-  async function boot(){
-    if (_started) return; _started = true;
+  window.addEventListener('error',function(e){
+    setHUDStatus('JS 错误：'+e.message);
+    postNative('jslog',{level:'error',msg:'Uncaught '+e.message+' @'+(e.filename||'')+':'+(e.lineno||'')});
+  });
 
-    // 解码 Worker 数量：真机内存吃紧可降到 2
-    var NUM_WORKERS = 3;
+  var _started=false;
+  async function boot(){
+    if(_started) return; _started=true;
+    var NUM_WORKERS=3;
     Recv.init_ww(NUM_WORKERS);
 
-    // 劫持进度：回传原生 HUD（对齐网页端 render_progress）
-    var origRender = Recv.render_progress;
-    Recv.render_progress = function(report){
-      try { origRender.call(Recv, report); } catch(e){}
-      if (Array.isArray(report) && report.length){
-        var avg = Math.min(1.0, report.reduce(function(a,b){return a+b;},0)/report.length);
-        postNative('progress', { percent: Math.round(avg*100), streams: report.length });
+    // ── 劫持进度：更新内 HUD（实时，不依赖原生桥）──
+    var origRender=Recv.render_progress;
+    Recv.render_progress=function(report){
+      try{origRender.call(Recv,report);}catch(e){}
+      if(Array.isArray(report)&&report.length){
+        var avg=Math.min(1.0,report.reduce(function(a,b){return a+b;},0)/report.length);
+        setPercent(Math.round(avg*100),report.length);
+        setHUDStatus('解码中… '+Math.round(avg*100)+'% · '+report.length+' 流');
+        // 低频同步原生（约每秒）
+        if(!HUD._lastSync||Date.now()-HUD._lastSync>800){HUD._lastSync=Date.now();syncToNative();}
       }
     };
 
-    // 劫持最终下载：把文件交给原生，而不是触发浏览器下载
-    Zstd.download_blob = function(name, blob){
-      setStatus('文件就绪：'+name+'（'+blob.size+' 字节），回传原生…');
-      postNative('fileMeta', { name: name, size: blob.size });
+    // ── 劫持模式锁定 ──
+    var origSetMode=Recv.setMode, _ms=0;
+    Recv.setMode=function(m){
+      origSetMode.call(Recv,m);
+      if(m>0&&m!==_ms){_ms=m;setMode(({4:'4C',66:'Bu',67:'Bm',68:'B'})[m]||('#'+m));syncToNative();}
+    };
+
+    // ── 劫持下载 ──
+    Zstd.download_blob=function(name,blob){
+      setFileName(name); stopTimer(); setHUDStatus('✅ 接收完成：'+name);
+      postNative('fileMeta',{name:name,size:blob.size});
       blob.arrayBuffer().then(function(ab){
-        var u8 = new Uint8Array(ab);
-        var bin = ''; var CH = 0x8000;
-        for (var i=0;i<u8.length;i+=CH){
-          bin += String.fromCharCode.apply(null, u8.subarray(i, i+CH));
-        }
-        postNative('fileComplete', { name: name, size: blob.size, data: btoa(bin) });
+        var u8=new Uint8Array(ab),bin='',CH=0x8000;
+        for(var i=0;i<u8.length;i+=CH) bin+=String.fromCharCode.apply(null,u8.subarray(i,i+CH));
+        postNative('fileComplete',{name:name,size:blob.size,data:btoa(bin)});
       });
     };
 
     await Recv.ww_ready;
-    console.log('[harness] workers ready, allocate sink');
-    if (typeof Sink !== 'undefined') Sink.allocate();
-
+    console.log('[harness] workers ready');
+    if(typeof Sink!=='undefined') Sink.allocate();
     startCamera();
   }
 
   function startCamera(){
-    try {
+    try{
       Recv.init_video(document.getElementById('video'));
       console.log('[harness] init_video ok');
       hideOverlay();
-      setStatus('相机已启动，正在扫描…');
-      // 通知原生侧隐藏加载提示
-      postNative('cameraStarted', {});
-    } catch(e){
-      console.error('[harness] init_video failed', e);
+      $('hud').style.opacity='1';
+      setHUDStatus('📷 正在扫描…');
+      startTimer();
+      postNative('cameraStarted',{});
+    }catch(e){
+      console.error('[harness] init_video failed',e);
       showStartButton('无法启动相机：'+e.message);
     }
   }
 
-  function hideOverlay(){ var o=document.getElementById('overlay'); if(o) o.style.display='none'; }
-  function showStartButton(msg){
-    var o=document.getElementById('overlay');
-    var t=document.getElementById('overlayText');
-    var b=document.getElementById('startBtn');
-    if(t) t.textContent = msg || '点击开始接收';
-    if(b) b.style.display='inline-block';
-    if(o) o.style.display='flex';
-  }
-  document.addEventListener('DOMContentLoaded', function(){
-    var b=document.getElementById('startBtn');
-    if(b) b.addEventListener('click', function(){ _started=false; hideOverlay(); boot(); });
-  });
+  // 暴露给原生轮询
+  window.__cfcGetState=function(){
+    return JSON.stringify({percent:HUD.percent,streams:HUD.streams,mode:HUD.mode,
+      fileName:HUD.fileName,status:HUD.status,timerSec:HUD.timerSec});
+  };
 
-  // 若 5 秒内 wasm 仍未就绪，提示用户
-  setTimeout(function(){
-    if(!_started){ setStatus('引擎加载较慢…'); }
-  }, 5000);
+  function hideOverlay(){ var o=$('overlay'); if(o) o.style.display='none'; }
+  function showStartButton(msg){
+    $('overlayText').textContent=msg||'点击开始接收'; $('startBtn').style.display='inline-block';
+    $('overlay').style.display='flex';
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    $('startBtn').addEventListener('click',function(){_started=false;hideOverlay();boot();});
+  });
+  setTimeout(function(){if(!_started){setHUDStatus('引擎加载较慢…');}},5000);
 </script>
 
 <script src="cimbar-deps/cimbar_js.2026-01-20T0312.js"></script>

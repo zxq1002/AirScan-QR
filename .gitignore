@@ -15,3 +15,4 @@ build/
 DerivedData/
 ios-cfc-client/build/
 ios-cfc-client/DerivedData/
+*.png
