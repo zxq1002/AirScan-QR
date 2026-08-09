@@ -18,20 +18,20 @@
         
         <div class="p-3 bg-slate-900/60 rounded-2xl border border-slate-700/60 text-xs text-slate-300 flex items-center justify-center gap-2">
             <span>⏱ 页面将在</span>
-            <span id="countdown" class="font-mono font-black text-blue-400 text-lg px-1.5 py-0.5 bg-blue-500/10 rounded-lg border border-blue-500/20">10</span>
-            <span>秒后自动跳转至标准版</span>
+            <span id="countdown" class="font-mono font-black text-emerald-400 text-lg px-1.5 py-0.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20">10</span>
+            <span>秒后自动跳转至高速专业版</span>
             <button id="btnCancel" onclick="cancelTimer()" class="ml-2 text-[10px] text-slate-500 hover:text-slate-300 underline">取消跳转</button>
         </div>
 
         <div class="space-y-3 pt-1">
-            <a href="airscan-basic.html" onclick="cancelTimer()" class="block w-full py-3.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg">
-                🟢 标准单码循环播放版 (airscan-basic.html)
+            <a href="cimbar-transfer.html" onclick="cancelTimer()" class="block w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg ring-2 ring-emerald-500/30">
+                🚀 Cimbar 4-Color 高速专业版 (cimbar-transfer.html)
             </a>
             <a href="airscan-fountain.html" onclick="cancelTimer()" class="block w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg">
                 ⛲ 喷泉码四码同传版 (airscan-fountain.html)
             </a>
-            <a href="cimbar-transfer.html" onclick="cancelTimer()" class="block w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg">
-                🚀 Cimbar 4-Color 高速专业版 (cimbar-transfer.html)
+            <a href="airscan-basic.html" onclick="cancelTimer()" class="block w-full py-3.5 px-4 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl font-bold text-sm transition-all">
+                🟢 标准单码循环播放版 (airscan-basic.html)
             </a>
         </div>
 
@@ -51,7 +51,7 @@
             }
             if (timeLeft <= 0) {
                 clearInterval(timer);
-                window.location.href = 'airscan-basic.html';
+                window.location.href = 'cimbar-transfer.html';
             }
         }, 1000);
 
