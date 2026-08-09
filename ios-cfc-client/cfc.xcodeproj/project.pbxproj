@@ -8,13 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		9AD1F6513028471200A366A7 /* FilePreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD1F64B3028471200A366A7 /* FilePreviewView.swift */; };
-		9AD1F6523028471200A366A7 /* CFCCoreDecoder.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 9AD1F6473028471200A366A7 /* CFCCoreDecoder.cpp */; };
-		9AD1F6533028471200A366A7 /* CameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD1F6443028471200A366A7 /* CameraManager.swift */; };
-		9AD1F6543028471200A366A7 /* CFCDecoderBridge.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9AD1F6493028471200A366A7 /* CFCDecoderBridge.mm */; };
-		9AD1F6553028471200A366A7 /* ProgressOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD1F64D3028471200A366A7 /* ProgressOverlayView.swift */; };
-		9AD1F6563028471200A366A7 /* CFCApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD1F6423028471200A366A7 /* CFCApp.swift */; };
 		9AD1F6573028471200A366A7 /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD1F64C3028471200A366A7 /* MainView.swift */; };
-		9AD1F6583028471200A366A7 /* ScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD1F64E3028471200A366A7 /* ScannerView.swift */; };
 		9ADB0B013028471200A366C1 /* WebReceiverServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ADB0A013028471200A366B1 /* WebReceiverServer.swift */; };
 		9ADB0B013028471200A366C2 /* WebReceiverViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ADB0A013028471200A366B2 /* WebReceiverViewController.swift */; };
 		9ADB0B013028471200A366C3 /* WebReceiverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9ADB0A013028471200A366B3 /* WebReceiverView.swift */; };
@@ -23,16 +17,8 @@
 
 /* Begin PBXFileReference section */
 		9AD1F62E302845FD00A366A7 /* cfc.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = cfc.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		9AD1F6423028471200A366A7 /* CFCApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CFCApp.swift; sourceTree = "<group>"; };
-		9AD1F6443028471200A366A7 /* CameraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManager.swift; sourceTree = "<group>"; };
-		9AD1F6463028471200A366A7 /* CFCCoreDecoder.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = CFCCoreDecoder.hpp; sourceTree = "<group>"; };
-		9AD1F6473028471200A366A7 /* CFCCoreDecoder.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = CFCCoreDecoder.cpp; sourceTree = "<group>"; };
-		9AD1F6483028471200A366A7 /* CFCDecoderBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CFCDecoderBridge.h; sourceTree = "<group>"; };
-		9AD1F6493028471200A366A7 /* CFCDecoderBridge.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CFCDecoderBridge.mm; sourceTree = "<group>"; };
 		9AD1F64B3028471200A366A7 /* FilePreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FilePreviewView.swift; sourceTree = "<group>"; };
 		9AD1F64C3028471200A366A7 /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
-		9AD1F64D3028471200A366A7 /* ProgressOverlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressOverlayView.swift; sourceTree = "<group>"; };
-		9AD1F64E3028471200A366A7 /* ScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScannerView.swift; sourceTree = "<group>"; };
 		9ADB0A013028471200A366B1 /* WebReceiverServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebReceiverServer.swift; sourceTree = "<group>"; };
 		9ADB0A013028471200A366B2 /* WebReceiverViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebReceiverViewController.swift; sourceTree = "<group>"; };
 		9ADB0A013028471200A366B3 /* WebReceiverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebReceiverView.swift; sourceTree = "<group>"; };
@@ -76,40 +62,11 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		9AD1F6433028471200A366A7 /* App */ = {
-			isa = PBXGroup;
-			children = (
-				9AD1F6423028471200A366A7 /* CFCApp.swift */,
-			);
-			path = App;
-			sourceTree = "<group>";
-		};
-		9AD1F6453028471200A366A7 /* Camera */ = {
-			isa = PBXGroup;
-			children = (
-				9AD1F6443028471200A366A7 /* CameraManager.swift */,
-			);
-			path = Camera;
-			sourceTree = "<group>";
-		};
-		9AD1F64A3028471200A366A7 /* Decoder */ = {
-			isa = PBXGroup;
-			children = (
-				9AD1F6463028471200A366A7 /* CFCCoreDecoder.hpp */,
-				9AD1F6473028471200A366A7 /* CFCCoreDecoder.cpp */,
-				9AD1F6483028471200A366A7 /* CFCDecoderBridge.h */,
-				9AD1F6493028471200A366A7 /* CFCDecoderBridge.mm */,
-			);
-			path = Decoder;
-			sourceTree = "<group>";
-		};
 		9AD1F64F3028471200A366A7 /* Views */ = {
 			isa = PBXGroup;
 			children = (
 				9AD1F64B3028471200A366A7 /* FilePreviewView.swift */,
 				9AD1F64C3028471200A366A7 /* MainView.swift */,
-				9AD1F64D3028471200A366A7 /* ProgressOverlayView.swift */,
-				9AD1F64E3028471200A366A7 /* ScannerView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -117,9 +74,6 @@
 		9AD1F6503028471200A366A7 /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				9AD1F6433028471200A366A7 /* App */,
-				9AD1F6453028471200A366A7 /* Camera */,
-				9AD1F64A3028471200A366A7 /* Decoder */,
 				9AD1F64F3028471200A366A7 /* Views */,
 				9ADB0C013028471200A366D1 /* WebReceiver */,
 			);
@@ -212,13 +166,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9AD1F6513028471200A366A7 /* FilePreviewView.swift in Sources */,
-				9AD1F6523028471200A366A7 /* CFCCoreDecoder.cpp in Sources */,
-				9AD1F6533028471200A366A7 /* CameraManager.swift in Sources */,
-				9AD1F6543028471200A366A7 /* CFCDecoderBridge.mm in Sources */,
-				9AD1F6553028471200A366A7 /* ProgressOverlayView.swift in Sources */,
-				9AD1F6563028471200A366A7 /* CFCApp.swift in Sources */,
 				9AD1F6573028471200A366A7 /* MainView.swift in Sources */,
-				9AD1F6583028471200A366A7 /* ScannerView.swift in Sources */,
 				9ADB0B013028471200A366C1 /* WebReceiverServer.swift in Sources */,
 				9ADB0B013028471200A366C2 /* WebReceiverViewController.swift in Sources */,
 				9ADB0B013028471200A366C3 /* WebReceiverView.swift in Sources */,
@@ -375,7 +323,6 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "$(SRCROOT)/cfc-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -409,7 +356,6 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "$(SRCROOT)/cfc-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};

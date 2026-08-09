@@ -43,7 +43,6 @@ if [ "$MODE" == "simulator" ]; then
                -sdk iphonesimulator \
                -configuration Debug \
                -derivedDataPath "${BUILD_DIR}/DerivedData" \
-               SWIFT_OBJC_BRIDGING_HEADER="${PROJECT_DIR}/cfc-Bridging-Header.h" \
                CODE_SIGNING_ALLOWED=NO \
                build
 
@@ -58,7 +57,6 @@ elif [ "$MODE" == "iphone" ] || [ "$MODE" == "device" ]; then
                -sdk iphoneos \
                -configuration Release \
                -derivedDataPath "${BUILD_DIR}/DerivedData" \
-               SWIFT_OBJC_BRIDGING_HEADER="${PROJECT_DIR}/cfc-Bridging-Header.h" \
                CODE_SIGNING_ALLOWED=NO \
                build
 

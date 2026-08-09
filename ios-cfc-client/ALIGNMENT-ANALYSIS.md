@@ -7,6 +7,16 @@
 |------|------|------|------|
 | v1.0.0 | 2026-08-08 | 周晓庆 | 初版 iOS 客户端（解码核心为占位实现） |
 | v1.1.0 | 2026-08-09 | 周晓庆 | 全面对齐网页端接收链路；**定位并移除伪造解码逻辑**；补齐计时/看门狗/背压/模式/重置；明确真实解码引擎接入点 |
+| v1.3.0 | 2026-08-09 | 周晓庆 | **路线 A 骨架已整体移除**（详见下方说明）；接收端唯一实现为路线 B |
+
+> ⚠️ **路线 A 骨架已于 v1.3.0 移除。**
+> `Sources/Decoder/`（`CFCCoreDecoder` / `CFCDecoderBridge`）、`Sources/Camera/CameraManager.swift`、
+> `Sources/Views/ScannerView.swift`、`Sources/Views/ProgressOverlayView.swift` 与桥接头均已删除。
+> 原因：`CFC_LIBCIMBAR_BACKEND` 始终为 0，真实引擎从未链接，骨架无法解出任何一帧；且其胶水层存在
+> 三处已知错误（`bytesPerRow` 行填充未处理、BGRA 按 RGBA 传入、载荷读取仍是 TODO），接入真实引擎时
+> 必然重写。约 1200 行不可达代码持续消耗审查与维护成本，故删除。
+> **日后若要做原生提速，请按本文 §6 从头实现，不要复活骨架**；历史实现见 commit `7ee408a`
+> （`git show 7ee408a -- ios-cfc-client/Sources/Decoder`）。
 
 **更新历史（v1.1.0）**
 - 🔴 根因定位：`CFCCoreDecoder.cpp` 为伪造解码器，无法解码真实 Cimbar 帧，已移除其误报逻辑。

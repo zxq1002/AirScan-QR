@@ -11,27 +11,25 @@
 3. **SwiftUI 现代化交互**：提供实时对焦框、传输速度 (KB/s)、帧率 (FPS) HUD 及原生 iOS“文件”App 保存/分享支持。
 4. **C++ 核心解码引擎**：通过 Objective-C++ 桥接层接入解码核心，API 与 libcimbar `cimbard_*` 协议同构，并预留 Zstandard 解压缩对接点。
 
-> ✅ **解码引擎状态（v1.2.0）**：**路线 B 已落地**——App 内用本地 HTTP 服务 + WKWebView 加载 `harness.html`，直接复用网页端同一份 `cimbar_js.wasm`（内嵌 libcimbar+OpenCV）完成解码，与网页端逐字节同源；模拟器已验证 wasm→Workers→相机授权全链路。原 AVFoundation + 原生 C++ 解码骨架保留为**路线 A**（原生链接 libcimbar+OpenCV，可进一步提速）的落点，未链接时不会伪造进度。详见 [WASM-REUSE-FEASIBILITY.md](WASM-REUSE-FEASIBILITY.md) 与 [ALIGNMENT-ANALYSIS.md](ALIGNMENT-ANALYSIS.md) §6。
+> ✅ **解码引擎状态（v1.2.0）**：**路线 B 已落地**——App 内用本地 HTTP 服务 + WKWebView 加载 `harness.html`，直接复用网页端同一份 `cimbar_js.wasm`（内嵌 libcimbar+OpenCV）完成解码，与网页端逐字节同源；模拟器已验证 wasm→Workers→相机授权全链路。原 AVFoundation + 原生 C++ 的**路线 A** 骨架（从未链接真实引擎，`CFC_LIBCIMBAR_BACKEND` 恒为 0）已移除，历史见 commit `7ee408a`；若日后要做原生提速，请按 §6 重新实现而非复活骨架。详见 [WASM-REUSE-FEASIBILITY.md](WASM-REUSE-FEASIBILITY.md) 与 [ALIGNMENT-ANALYSIS.md](ALIGNMENT-ANALYSIS.md) §6。
 
 ## 📁 目录结构
 
 ```text
 ios-cfc-client/
+├── cfc/
+│   └── cfcApp.swift                    # @main 应用入口（Xcode 自动同步组）
 ├── Sources/
-│   ├── App/
-│   │   └── CFCApp.swift                # SwiftUI 应用入口
-│   ├── Camera/
-│   │   └── CameraManager.swift         # 相机高帧率捕获控制器
-│   ├── Decoder/
-│   │   ├── CFCDecoderBridge.h          # ObjC++ 桥接头文件
-│   │   ├── CFCDecoderBridge.mm         # ObjC++ 桥接实现
-│   │   ├── CFCCoreDecoder.hpp          # C++ Cimbar 矩阵提取器
-│   │   └── CFCCoreDecoder.cpp          # C++ 喷泉码与 Zstd 解压
-│   └── Views/
-│       ├── MainView.swift              # 主界面
-│       ├── ScannerView.swift           # 相机预览与 UI 覆盖层
-│       ├── ProgressOverlayView.swift   # 传输 HUD
-│       └── FilePreviewView.swift       # 接收文件预览与保存
+│   ├── Views/
+│   │   ├── MainView.swift              # 主界面（TabView）
+│   │   └── FilePreviewView.swift       # 接收文件预览与保存
+│   └── WebReceiver/                    # 路线 B：WKWebView 接收端
+│       ├── WebReceiverServer.swift     # 本地 HTTP 静态服务（同源上下文）
+│       ├── WebReceiverViewController.swift  # WKWebView 宿主 + 原生桥
+│       └── WebReceiverView.swift       # SwiftUI 包装 + 文件预览衔接
+└── WebResources/
+    ├── harness.html                    # 取景区 + 实时进度面板 + 解码编排
+    └── cimbar-deps/                    # 复用网页端的 wasm / recv.js / zstd.js
 ```
 
 ## 🛠️ 编译与构建说明
