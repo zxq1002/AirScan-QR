@@ -3,9 +3,9 @@ lib.html
 
 # Xcode & iOS Build Artifacts & User Data
 build/
-*.xcodeproj/xcuserdata/
-*.xcworkspace/xcuserdata/
-*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+**/*.xcodeproj/xcuserdata/
+**/*.xcworkspace/xcuserdata/
+**/*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
 *.xcuserdata
 *.xcresult
 *.mode1v3
@@ -15,4 +15,3 @@ build/
 DerivedData/
 ios-cfc-client/build/
 ios-cfc-client/DerivedData/
-*.png

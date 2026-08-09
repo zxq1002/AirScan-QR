@@ -69,14 +69,32 @@ struct FilePreviewView: View {
         .cornerRadius(24)
         .shadow(radius: 20)
         .sheet(isPresented: $isSharing) {
-            ShareSheet(activityItems: [createTemporaryFileURL()])
+            if let url = createTemporaryFileURL() {
+                ShareSheet(activityItems: [url])
+            } else {
+                Text("无法写入临时文件，分享失败")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding()
+            }
         }
     }
 
-    private func createTemporaryFileURL() -> URL {
-        let tempDir = FileManager.default.temporaryDirectory
-        let fileURL = tempDir.appendingPathComponent(fileName)
-        try? fileData.write(to: fileURL)
+    /// 文件名来自发送端的 zstd 头（cimbard_get_filename），属不可信输入：
+    /// 只取最后一段并剔除分隔符，避免 "a/b.bin" 落到不存在的子目录里。
+    private func createTemporaryFileURL() -> URL? {
+        var safe = (fileName as NSString).lastPathComponent
+            .replacingOccurrences(of: "/", with: "_")
+            .replacingOccurrences(of: ":", with: "_")
+        if safe.isEmpty || safe == "." || safe == ".." { safe = "received.bin" }
+
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent(safe)
+        do {
+            try fileData.write(to: fileURL)
+        } catch {
+            NSLog("[FilePreview] 写入临时文件失败 \(safe): \(error)")
+            return nil
+        }
         return fileURL
     }
 }

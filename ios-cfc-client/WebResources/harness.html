@@ -211,6 +211,19 @@
       }
     };
 
+    // ── 劫持错误上报：getUserMedia 是异步 reject，startCamera 的 try/catch 抓不到，
+    //    recv.js 只会把错误写进隐藏的 #errorbox，用户会永远停在"请对准二维码" ──
+    var origSetError=Recv.set_error;
+    Recv.set_error=function(msg){
+      var r; try{ r=origSetError.call(Recv,msg); }catch(e){}
+      console.error('[harness] recv error: '+msg);
+      stopTick(); HUD.phase='boot';
+      setHUDStatus('❌ '+msg);
+      showStartButton('相机启动失败：'+msg);
+      postNative('status',{status:'相机启动失败：'+msg});
+      return r;
+    };
+
     // ── 劫持每帧的视觉状态刷新：驱动"识别到码才计时 / 丢失则暂停" ──
     // 复用 recv.js 自带的判定：最近 30 帧（约 2s）内成功解出数据才算锁定
     var origVisual=Recv.update_visual_state;
@@ -292,7 +305,14 @@
     $('overlay').style.display='flex';
   }
   document.addEventListener('DOMContentLoaded',function(){
-    $('startBtn').addEventListener('click',function(){_started=false;hideOverlay();boot();});
+    // 重试必须整页重载，不能重入 boot()：recv.js 的 init_ww 只清空 _workers 数组
+    // 而不 terminate 旧 worker（每个各带一份 wasm 实例），几个劫持也会逐层叠加，
+    // 且 ww_ready 已 settle 会让 startCamera 抢在新 worker 就绪之前跑。
+    $('startBtn').addEventListener('click',function(){
+      $('startBtn').style.display='none';
+      $('overlayText').textContent='正在重试…';
+      setTimeout(function(){ location.reload(); },0);
+    });
     $('hudReset').addEventListener('click',function(){ window.__cfcHardReset(); });
   });
   setTimeout(function(){if(!_started){setHUDStatus('引擎加载较慢…');}},5000);

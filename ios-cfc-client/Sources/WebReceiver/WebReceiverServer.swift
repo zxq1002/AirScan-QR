@@ -44,22 +44,30 @@ final class WebReceiverServer: @unchecked Sendable {
             self?.handle(conn)
         }
 
-        // 等待监听就绪并拿到真实端口
+        // 等待监听就绪并拿到真实端口。
+        // stateUpdateHandler 由 listener.start(queue:) 的串行队列投递，访问天然串行；
+        // 用引用类型持有"已 resume"标记，避免捕获 var（Swift 6 语言模式下是错误）。
+        // nonisolated：本模块默认 MainActor 隔离，而该标记只在网络队列上访问
+        nonisolated final class ResumeOnce: @unchecked Sendable { var done = false }
+        let once = ResumeOnce()
+
         let assignedPort: UInt16 = try await withCheckedThrowingContinuation { cont in
-            var resumed = false
             listener.stateUpdateHandler = { state in
+                let finish: (Result<UInt16, Error>) -> Void = { result in
+                    guard !once.done else { return }
+                    once.done = true
+                    cont.resume(with: result)
+                }
                 switch state {
                 case .ready:
-                    if !resumed {
-                        resumed = true
-                        cont.resume(returning: listener.port?.rawValue ?? 0)
-                    }
+                    finish(.success(listener.port?.rawValue ?? 0))
                 case .failed(let err):
-                    if !resumed {
-                        resumed = true
-                        NSLog("[WebServer] 监听失败: \(err)")
-                        cont.resume(throwing: ServerError.listenerFailed)
-                    }
+                    NSLog("[WebServer] 监听失败: \(err)")
+                    finish(.failure(ServerError.listenerFailed))
+                case .cancelled:
+                    // stop() 与启动竞态时也必须 resume，否则调用方永久挂起
+                    NSLog("[WebServer] 监听在就绪前被取消")
+                    finish(.failure(ServerError.listenerFailed))
                 default:
                     break
                 }
@@ -129,13 +137,15 @@ final class WebReceiverServer: @unchecked Sendable {
             return
         }
 
-        // 防目录穿越：标准化后必须仍在 root 之内
+        // 防目录穿越：标准化后必须仍在 root 之内。
+        // 前缀必须带尾部分隔符，否则 WebResourcesBackup/ 这类同前缀兄弟目录能绕过。
         let fileURL = root.appendingPathComponent(String(path.dropFirst()))
             .standardizedFileURL
         let rootStd = root.standardizedFileURL
-        guard fileURL.path.hasPrefix(rootStd.path),
-              FileManager.default.fileExists(atPath: fileURL.path),
-              !FileManager.default.fileExists(atPath: fileURL.path, isDirectory: nil) || true
+        var isDir: ObjCBool = false
+        guard fileURL.path.hasPrefix(rootStd.path + "/"),
+              FileManager.default.fileExists(atPath: fileURL.path, isDirectory: &isDir),
+              !isDir.boolValue
         else {
             respond(code: 404, body: Data("Not Found".utf8), contentType: "text/plain", on: conn)
             return
