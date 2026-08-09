@@ -28,14 +28,22 @@ struct MainView: View {
                     .fontWeight(.bold)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    Label("基于硬件级 AVFoundation 直出像素流", systemImage: "cpu")
-                    Label("避开 Safari WebKit 渲染失真", systemImage: "eye.slash")
-                    Label("支持 4C 高密度彩色图标色码", systemImage: "paintpalette")
-                    Label("1MB 文件约 40s 完成传输", systemImage: "speedometer")
+                    Label("复用与网页端逐字节同源的 WebAssembly 解码引擎", systemImage: "cpu")
+                    Label("引擎内嵌 libcimbar + OpenCV，喷泉码免反向链路", systemImage: "square.stack.3d.up")
+                    Label("WKWebView + 本地 HTTP 同源服务承载解码", systemImage: "safari")
+                    Label("3 个 Web Worker 并行解码，Zstd 解压还原", systemImage: "cpu.fill")
+                    Label("自动识别 B / Bm / Bu / 4C 四种模式", systemImage: "paintpalette")
+                    Label("识别到码才起表，目标丢失自动暂停计时", systemImage: "timer")
                 }
                 .font(.subheadline)
                 .foregroundColor(.secondary)
-                .padding()
+                .padding(.horizontal)
+                .padding(.vertical, 8)
+
+                Text("传输耗时取决于模式、帧率、光照、距离与机型。iOS 端实测：B 模式 15 FPS 下 1MB 约 32 秒；网页端参考值约 40 秒（见 CIMBAR-TRANSFER-README）。")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
 
                 Spacer()
             }
