@@ -377,10 +377,22 @@
             document.getElementById('dropZone').classList.add('hidden');
 
             const btn = document.getElementById('btnStart');
-            btn.disabled = false;
-            btn.classList.remove('bg-gray-300');
-            btn.classList.add('bg-blue-600', 'shadow-xl', 'active:scale-95');
-            btn.textContent = '🚀 开始编码传输';
+            if (isWasmReady()) {
+                btn.disabled = false;
+                btn.classList.remove('bg-gray-300');
+                btn.classList.add('bg-blue-600', 'shadow-xl', 'active:scale-95');
+                btn.textContent = '🚀 开始编码传输';
+            } else {
+                btn.disabled = true;
+                btn.classList.add('bg-gray-300');
+                btn.classList.remove('bg-blue-600', 'shadow-xl', 'active:scale-95');
+                btn.textContent = '⏳ WASM 引擎载入中...';
+            }
+        }
+
+        // WASM 模块准备就绪判定
+        function isWasmReady() {
+            return typeof Module !== 'undefined' && typeof Module._cimbare_configure === 'function';
         }
 
         function clearFile() {
@@ -423,6 +435,11 @@
         // 开始编码
         async function startEncoding() {
             if (!sendState.file) return;
+
+            if (!isWasmReady()) {
+                alert('⏳ Cimbar WebAssembly 引擎尚未载入完成，请稍候 2-3 秒后再试...');
+                return;
+            }
 
             sendState.isEncoding = true;
             document.getElementById('encodingBox').classList.remove('hidden');
@@ -765,6 +782,22 @@
 
 // ==================== 初始化 ====================
 
+        // 配置 Module.onRuntimeInitialized 回调
+        if (typeof Module === 'undefined') {
+            window.Module = {};
+        }
+        
+        Module.onRuntimeInitialized = () => {
+            console.log('✅ Cimbar WASM 模块已成功就绪！');
+            if (sendState.file) {
+                const btn = document.getElementById('btnStart');
+                btn.disabled = false;
+                btn.classList.remove('bg-gray-300');
+                btn.classList.add('bg-blue-600', 'shadow-xl', 'active:scale-95');
+                btn.textContent = '🚀 开始编码传输';
+            }
+        };
+
         // 初始化 vConsole
         const vConsole = new VConsole();
         console.log('Cimbar 传输助手已加载，vConsole 已初始化');
@@ -777,8 +810,10 @@
 
         window.onload = () => {
             // 检查 WASM 是否加载
-            if (typeof Module === 'undefined') {
-                console.warn('Cimbar WASM 模块未加载，部分功能可能不可用');
+            if (isWasmReady()) {
+                console.log('✅ WASM 引擎就绪');
+            } else {
+                console.warn('⏳ Cimbar WASM 模块正在异步加载中...');
             }
         };
     </script>
