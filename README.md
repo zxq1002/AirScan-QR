@@ -71,10 +71,14 @@
 
 ## 版本介绍
 
-1. [index.html](https://topcss.github.io/AirScan-QR/index.html): 正式版，技术路线为单码循环播放传文件，支持摄像头扫码和 PC 跨应用扫码。
-2. [index-embedded.html](index-embedded.html): 正式版离线单文件版，无需联网，直接在浏览器打开即可使用。
-3. [airscan-fountain.html](https://topcss.github.io/AirScan-QR/airscan-fountain.html): 喷泉码版，技术路线为四码同传，解决了丢帧重传问题，极大提升了传输效率。
-4. [airscan-fountain-embedded.html](airscan-fountain-embedded.html): 喷泉码离线单文件版，内嵌所有依赖库，100% 纯离线无网环境下开箱即用。
+### 🟢 基础轻量版（零配置、全设备兼容、支持直接双击/离线打开）
+1. [index.html](https://topcss.github.io/AirScan-QR/index.html): 标准单码循环播放版，支持摄像头扫码和 PC 跨应用录屏扫码。
+2. [index-embedded.html](index-embedded.html): 标准版离线单文件，内嵌所有依赖，无网双击打开即用。
+3. [airscan-fountain.html](https://topcss.github.io/AirScan-QR/airscan-fountain.html): 喷泉码四码同传版，解决丢帧重传问题，传输效率极高。
+4. [airscan-fountain-embedded.html](airscan-fountain-embedded.html): 喷泉码离线单文件版，内嵌全套依赖，100% 纯离线开箱即用。
+
+### 🚀 高速专业版（需本地 HTTPS Server & WASM 依赖）
+5. [cimbar-transfer.html](cimbar-transfer.html): Cimbar 矩阵色码版（参考 libcimbar / CFC 实现），采用高密度 4-Color 图标矩阵 + WebAssembly 解码 + Zstd 压缩，1MB 文件仅需约 40 秒传输完成。相关说明参见 [CIMBAR-TRANSFER-README.md](CIMBAR-TRANSFER-README.md)。
 
 ## 📜 许可证
 
