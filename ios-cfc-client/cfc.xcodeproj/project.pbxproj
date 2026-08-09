@@ -136,6 +136,7 @@
 			knownRegions = (
 				en,
 				Base,
+				"zh-Hans",
 			);
 			mainGroup = 9AD1F625302845FD00A366A7;
 			minimizedProjectReferenceProxies = 1;
@@ -305,6 +306,7 @@
 				DEVELOPMENT_TEAM = L44Y5ZW9AY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Cimbar;
 				INFOPLIST_KEY_NSCameraUsageDescription = "需要访问摄像头以扫描并接收 Cimbar 条码传输的文件";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -338,6 +340,7 @@
 				DEVELOPMENT_TEAM = L44Y5ZW9AY;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = Cimbar;
 				INFOPLIST_KEY_NSCameraUsageDescription = "需要访问摄像头以扫描并接收 Cimbar 条码传输的文件";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
