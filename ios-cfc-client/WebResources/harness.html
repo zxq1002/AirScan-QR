@@ -7,32 +7,55 @@
 <style>
   html,body{margin:0;padding:0;height:100%;background:#0f172a;overflow:hidden;
     font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent;}
-  /* 视频全屏 */
-  #video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;}
-  /* 取景框十字 */
-  .crosshair{position:absolute;width:20%;height:20%;border:4px solid rgba(255,255,255,.5);pointer-events:none;z-index:5;}
+  /* ─── 上下分区：上方相机取景区 + 下方独立进度面板，两者互不遮挡 ─── */
+  body{display:flex;flex-direction:column;box-sizing:border-box;
+    padding:calc(env(safe-area-inset-top,0px) + 8px) 10px calc(env(safe-area-inset-bottom,0px) + 8px);}
+
+  /* 取景区（占据剩余全部高度） */
+  #stage{position:relative;flex:1 1 auto;min-height:0;overflow:hidden;background:#000;
+    border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,.5);}
+  #video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;}
+  /* 取景框十字：绿=已锁定二维码（计时中），黄=看到码但未解出，白=未识别 */
+  .crosshair{position:absolute;width:20%;height:20%;border:4px solid rgba(255,255,255,.5);pointer-events:none;z-index:5;
+    transition:border-color .2s;}
   .crosshair.tl{top:15%;left:15%;border-right:none;border-bottom:none;}
   .crosshair.br{bottom:15%;right:15%;border-left:none;border-top:none;}
+  /* 注意顺序：recv.js 的 update_visual_state 有个上游笔误，可能给 crosshair2
+     同时留下两个 class，把 active 放后面保证"已锁定"的绿色优先 */
+  .crosshair.scanning_xhairs{border-color:#fbbf24;}
+  .crosshair.active_xhairs{border-color:#34d399;}
 
-  /* ─── 顶部 HUD：进度 / 模式 / 计时 / 文件名 ─── */
-  #hud{position:absolute;top:env(safe-area-inset-top,0px);left:0;right:0;z-index:20;padding:10px 14px 12px;
-    background:linear-gradient(rgba(15,23,42,.88),rgba(15,23,42,.0));color:#e2e8f0;transition:opacity .3s;}
-  #hudTop{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+  /* ─── 进度面板：进度 / 模式 / 计时 / 文件名（独立占位，不覆盖画面） ─── */
+  #hud{flex:0 0 auto;margin-top:10px;padding:12px 14px 13px;box-sizing:border-box;color:#e2e8f0;
+    background:#111c33;border:1px solid rgba(148,163,184,.16);border-radius:16px;}
+  #hudTop{display:flex;align-items:center;justify-content:space-between;}
   #hudTitle{font-size:13px;font-weight:800;color:#60a5fa;letter-spacing:.3px;}
-  #hudRight{display:flex;gap:10px;align-items:center;}
+  #hudRight{display:flex;gap:8px;align-items:center;}
+  /* 计时器：按 phase 着色 —— 灰=等待首次识别，蓝=计时中，黄=已暂停，绿=已完成 */
   #hudTimer{font-size:12px;font-family:ui-monospace,monospace;font-weight:700;color:#93c5fd;}
+  #hudTimer.boot,#hudTimer.idle{color:#64748b;}
+  #hudTimer.running{color:#93c5fd;}
+  #hudTimer.paused{color:#fbbf24;}
+  #hudTimer.done{color:#34d399;}
+  /* 手工重置按钮 */
+  #hudReset{font:inherit;font-size:11px;font-weight:700;color:#e2e8f0;padding:4px 10px;
+    border:1px solid rgba(148,163,184,.35);background:rgba(148,163,184,.12);border-radius:999px;
+    -webkit-appearance:none;cursor:pointer;}
+  #hudReset:active{background:rgba(148,163,184,.32);}
   #hudMode{font-size:10px;font-family:ui-monospace,monospace;font-weight:700;color:#c084fc;padding:2px 8px;
     background:rgba(192,132,252,0.15);border-radius:6px;display:none;}
-  #hudPercent{font-size:17px;font-family:ui-monospace,monospace;font-weight:800;color:#34d399;}
-  /* 进度条 */
-  #hudBar{width:100%;height:6px;background:rgba(255,255,255,.12);border-radius:3px;overflow:hidden;margin:6px 0;}
+  /* 进度条 + 百分比同行 */
+  #hudProg{display:flex;align-items:center;gap:10px;margin:10px 0 8px;}
+  #hudBar{flex:1 1 auto;height:10px;background:rgba(255,255,255,.12);border-radius:5px;overflow:hidden;}
   #hudBarFill{height:100%;background:linear-gradient(90deg,#3b82f6,#10b981);width:0%;
-    border-radius:3px;transition:width .2s;}
+    border-radius:5px;transition:width .2s;}
+  #hudPercent{flex:0 0 auto;min-width:48px;text-align:right;
+    font-size:18px;font-family:ui-monospace,monospace;font-weight:800;color:#34d399;}
   /* 文件名 & 状态 */
-  #hudFileName{font-size:11px;color:#cbd5e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none;}
-  #hudStatus{font-size:10px;color:#94a3b8;margin-top:2px;}
+  #hudFileName{font-size:12px;color:#cbd5e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none;}
+  #hudStatus{font-size:11px;color:#94a3b8;margin-top:3px;}
 
-  /* 启动遮罩 */
+  /* 启动遮罩（仅覆盖取景区，进度面板始终可见） */
   #overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
     gap:14px;background:rgba(15,23,42,.78);z-index:30;color:#e2e8f0;text-align:center;padding:24px;box-sizing:border-box;}
   #startBtn{padding:16px 34px;border:none;border-radius:16px;background:#3b82f6;color:#fff;
@@ -42,26 +65,30 @@
 </style>
 </head>
 <body>
-  <video id="video" autoplay playsinline muted></video>
-  <div id="crosshair1" class="crosshair tl"></div>
-  <div id="crosshair2" class="crosshair br"></div>
+  <!-- ═══ 上方：相机取景区（启动遮罩内嵌于此，不遮挡下方进度面板）═══ -->
+  <div id="stage">
+    <video id="video" autoplay playsinline muted></video>
+    <div id="crosshair1" class="crosshair tl"></div>
+    <div id="crosshair2" class="crosshair br"></div>
 
-  <!-- ═══ 靠内的实时 HUD ═══ -->
-  <div id="hud" style="opacity:0">
-    <div id="hudTop"><span id="hudTitle">CFC 扫码接收</span>
-      <div id="hudRight"><span id="hudTimer">⏱ 00:00</span><span id="hudMode"></span></div>
+    <div id="overlay">
+      <div id="overlayText">正在启动解码引擎…</div>
+      <button id="startBtn" style="display:none;">📷 开始接收</button>
     </div>
-    <div id="hudBar"><div id="hudBarFill"></div></div>
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <span id="hudFileName"></span><span id="hudPercent">0%</span>
-    </div>
-    <div id="hudStatus">📷 准备中…</div>
   </div>
 
-  <!-- 启动遮罩 -->
-  <div id="overlay">
-    <div id="overlayText">正在启动解码引擎…</div>
-    <button id="startBtn" style="display:none;">📷 开始接收</button>
+  <!-- ═══ 下方：实时进度面板 ═══ -->
+  <div id="hud">
+    <div id="hudTop"><span id="hudTitle">CFC 扫码接收</span>
+      <div id="hudRight"><span id="hudMode"></span><span id="hudTimer" class="boot">⏱ 00:00</span>
+        <button id="hudReset" type="button">↺ 重置</button></div>
+    </div>
+    <div id="hudProg">
+      <div id="hudBar"><div id="hudBarFill"></div></div>
+      <span id="hudPercent">0%</span>
+    </div>
+    <div id="hudFileName"></div>
+    <div id="hudStatus">📷 准备中…</div>
   </div>
 
   <!-- recv.js 隐藏 DOM -->
@@ -82,7 +109,15 @@
   }
 
   // ============ 内 HUD（实时，不依赖原生桥） ============
-  var HUD={percent:0, streams:0, mode:'', fileName:'', status:'', timerSec:0, timerActive:false, timerId:null};
+  // phase 状态机：
+  //   boot    引擎/相机启动中，状态行由 setHUDStatus 直接控制
+  //   idle    相机已就绪，等待首次识别到二维码（计时器停在 00:00）
+  //   running 已锁定二维码，计时中
+  //   paused  目标丢失（镜头移开），计时冻结，重新识别后自动续计
+  //   done    文件接收完成，计时停在总耗时
+  var HUD={percent:0, streams:0, mode:'', fileName:'', status:'', detail:'',
+           phase:'boot', locked:false, accumMs:0, segStart:0, lastFrameAt:0,
+           tickId:null, timerSec:0, _lastMode:0};
   var $=function(id){return document.getElementById(id);};
 
   function setPercent(p, streams){
@@ -94,15 +129,48 @@
   function setFileName(n){ HUD.fileName=n; var e=$('hudFileName'); e.textContent=n; e.style.display=n?'block':'none'; }
   function setHUDStatus(s){ HUD.status=s; $('hudStatus').textContent=s; }
 
-  function startTimer(){
-    if(HUD.timerActive) return; HUD.timerActive=true; HUD.timerSec=0;
+  // ── 计时：累计毫秒 + 当前计时段起点，暂停/续计不丢精度 ──
+  function elapsedMs(){ return HUD.accumMs + (HUD.segStart ? Date.now()-HUD.segStart : 0); }
+  function freezeTimer(){ if(HUD.segStart){ HUD.accumMs+=Date.now()-HUD.segStart; HUD.segStart=0; } }
+
+  function renderTimer(){
+    var sec=Math.floor(elapsedMs()/1000); HUD.timerSec=sec;
+    var icon = HUD.phase==='paused' ? '⏸' : (HUD.phase==='done' ? '✅' : '⏱');
     var e=$('hudTimer');
-    HUD.timerId=setInterval(function(){
-      HUD.timerSec++; var m=Math.floor(HUD.timerSec/60),s=HUD.timerSec%60;
-      e.textContent='⏱ '+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
-    },1000);
+    e.textContent=icon+' '+String(Math.floor(sec/60)).padStart(2,'0')+':'+String(sec%60).padStart(2,'0');
+    e.className=HUD.phase;
   }
-  function stopTimer(){ if(HUD.timerId){clearInterval(HUD.timerId);HUD.timerId=null;} HUD.timerActive=false; }
+
+  function tickOnce(){
+    // 帧回调断流（相机停摆/被完全遮挡/App 切后台）超过 1.5s 也按丢失目标处理
+    if(HUD.locked && HUD.lastFrameAt && Date.now()-HUD.lastFrameAt>1500) setLocked(false);
+    renderTimer();
+  }
+  function startTick(){ if(HUD.tickId) return; HUD.tickId=setInterval(tickOnce,500); }
+  function stopTick(){ if(HUD.tickId){clearInterval(HUD.tickId);HUD.tickId=null;} }
+
+  // 由 Recv.update_visual_state 每帧驱动：on=最近 30 帧内成功解出过数据
+  function setLocked(on){
+    if(HUD.locked===on) return;
+    HUD.locked=on;
+    if(HUD.phase==='done'||HUD.phase==='boot') return;
+    if(on){
+      HUD.segStart=Date.now(); HUD.phase='running';
+    }else{
+      freezeTimer();
+      HUD.phase = HUD.accumMs>0 ? 'paused' : 'idle';
+    }
+    renderTimer(); refreshStatus();
+  }
+
+  // 状态行的唯一出口，避免解码进度与暂停提示互相覆盖
+  function refreshStatus(){
+    if(HUD.phase==='boot') return;
+    if(HUD.phase==='done'){ setHUDStatus('✅ 接收完成：'+HUD.fileName); return; }
+    if(HUD.phase==='idle'){ setHUDStatus('📷 请对准二维码，识别后自动开始计时'); return; }
+    if(HUD.phase==='paused'){ setHUDStatus('⏸ 已暂停 · 未识别到二维码，请重新对准'); return; }
+    setHUDStatus(HUD.detail||'🔍 已锁定，正在接收…');
+  }
 
   // 把当前进度同步给原生（供弱更新时的兜底）
   function syncToNative(){
@@ -136,22 +204,33 @@
       if(Array.isArray(report)&&report.length){
         var avg=Math.min(1.0,report.reduce(function(a,b){return a+b;},0)/report.length);
         setPercent(Math.round(avg*100),report.length);
-        setHUDStatus('解码中… '+Math.round(avg*100)+'% · '+report.length+' 流');
+        HUD.detail='解码中… '+Math.round(avg*100)+'% · '+report.length+' 流';
+        refreshStatus();
         // 低频同步原生（约每秒）
         if(!HUD._lastSync||Date.now()-HUD._lastSync>800){HUD._lastSync=Date.now();syncToNative();}
       }
     };
 
+    // ── 劫持每帧的视觉状态刷新：驱动"识别到码才计时 / 丢失则暂停" ──
+    // 复用 recv.js 自带的判定：最近 30 帧（约 2s）内成功解出数据才算锁定
+    var origVisual=Recv.update_visual_state;
+    Recv.update_visual_state=function(){
+      HUD.lastFrameAt=Date.now();
+      try{origVisual.call(Recv);}catch(e){}
+      setLocked($('crosshair1').classList.contains('active_xhairs'));
+    };
+
     // ── 劫持模式锁定 ──
-    var origSetMode=Recv.setMode, _ms=0;
+    var origSetMode=Recv.setMode;
     Recv.setMode=function(m){
       origSetMode.call(Recv,m);
-      if(m>0&&m!==_ms){_ms=m;setMode(({4:'4C',66:'Bu',67:'Bm',68:'B'})[m]||('#'+m));syncToNative();}
+      if(m>0&&m!==HUD._lastMode){HUD._lastMode=m;setMode(({4:'4C',66:'Bu',67:'Bm',68:'B'})[m]||('#'+m));syncToNative();}
     };
 
     // ── 劫持下载 ──
     Zstd.download_blob=function(name,blob){
-      setFileName(name); stopTimer(); setHUDStatus('✅ 接收完成：'+name);
+      freezeTimer(); HUD.phase='done'; renderTimer();
+      setFileName(name); refreshStatus();
       postNative('fileMeta',{name:name,size:blob.size});
       blob.arrayBuffer().then(function(ab){
         var u8=new Uint8Array(ab),bin='',CH=0x8000;
@@ -171,9 +250,8 @@
       Recv.init_video(document.getElementById('video'));
       console.log('[harness] init_video ok');
       hideOverlay();
-      $('hud').style.opacity='1';
-      setHUDStatus('📷 正在扫描…');
-      startTimer();
+      // 相机就绪 ≠ 开始计时：进入 idle，等第一次真正解出数据才起表
+      HUD.phase='idle'; renderTimer(); refreshStatus(); startTick();
       postNative('cameraStarted',{});
     }catch(e){
       console.error('[harness] init_video failed',e);
@@ -181,10 +259,31 @@
     }
   }
 
+  // 软复位：清空进度面板与计时、模式回 Auto，相机不断流，立即等待下一次识别。
+  // 原生在关闭"接收完成"预览后调用，页面内也可复用。
+  window.__cfcResetHUD=function(){
+    HUD.accumMs=0; HUD.segStart=0; HUD.locked=false; HUD.detail=''; HUD._lastMode=0;
+    HUD.phase = (HUD.phase==='boot') ? 'boot' : 'idle';
+    setPercent(0,0); setFileName(''); setMode('');
+    try{ if(window.Recv&&Recv.setMode) Recv.setMode(0); }catch(e){}   // 模式回自动探测
+    renderTimer(); refreshStatus(); startTick();
+    return 'ok';
+  };
+
+  // 硬复位：重新加载页面。wasm 未导出解码器 reset，只有重建 Module / Worker /
+  // fountain sink / 相机才能真正回到初始状态，因此手工重置走这条路。
+  window.__cfcHardReset=function(){
+    stopTick();
+    HUD.phase='boot';
+    setHUDStatus('↺ 正在重置…');
+    setTimeout(function(){ location.reload(); },0);
+    return 'ok';
+  };
+
   // 暴露给原生轮询
   window.__cfcGetState=function(){
     return JSON.stringify({percent:HUD.percent,streams:HUD.streams,mode:HUD.mode,
-      fileName:HUD.fileName,status:HUD.status,timerSec:HUD.timerSec});
+      fileName:HUD.fileName,status:HUD.status,timerSec:HUD.timerSec,phase:HUD.phase});
   };
 
   function hideOverlay(){ var o=$('overlay'); if(o) o.style.display='none'; }
@@ -194,6 +293,7 @@
   }
   document.addEventListener('DOMContentLoaded',function(){
     $('startBtn').addEventListener('click',function(){_started=false;hideOverlay();boot();});
+    $('hudReset').addEventListener('click',function(){ window.__cfcHardReset(); });
   });
   setTimeout(function(){if(!_started){setHUDStatus('引擎加载较慢…');}},5000);
 </script>

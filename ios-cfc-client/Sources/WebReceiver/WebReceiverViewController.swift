@@ -28,6 +28,11 @@ final class WebReceiverViewController: UIViewController {
     private var startedServer = false
     private var pollTimer: Timer?
 
+    /// 网页内 HUD 已是实时渲染的唯一进度来源（harness.html #hud），
+    /// 原生轮询只作为调试兜底：默认关闭，避免每 500ms 的 evaluateJavaScript
+    /// 与解码任务抢占主线程。
+    private var enableNativeStatePolling = false
+
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = UIColor(red: 0.06, green: 0.09, blue: 0.16, alpha: 1)
@@ -49,6 +54,11 @@ final class WebReceiverViewController: UIViewController {
 
     private func setupWebView() {
         let config = WKWebViewConfiguration()
+        // 关键：iPhone 上 allowsInlineMediaPlayback 默认为 false，此时 <video playsinline>
+        // 会被忽略，摄像头流被系统全屏播放控制器接管并盖住整个网页（含进度 HUD）。
+        config.allowsInlineMediaPlayback = true
+        // 顺带禁用画中画，避免误触后预览被剥离成右下角悬浮窗、页面只剩背景色。
+        config.allowsPictureInPictureMediaPlayback = false
         config.mediaTypesRequiringUserActionForPlayback = []
 
         let relay = WeakScriptMessageHandler(self)
@@ -82,8 +92,18 @@ final class WebReceiverViewController: UIViewController {
         wv.uiDelegate = self
         wv.navigationDelegate = self
         wv.scrollView.isScrollEnabled = false
+        wv.scrollView.contentInsetAdjustmentBehavior = .never
+        // 与宿主同色，消除加载期白闪
+        wv.isOpaque = false
+        wv.backgroundColor = view.backgroundColor
+        wv.scrollView.backgroundColor = view.backgroundColor
         view.addSubview(wv)
         webView = wv
+    }
+
+    /// 复位网页内 HUD（文件预览关闭、准备接收下一个文件时调用）
+    func resetWebHUD() {
+        webView?.evaluateJavaScript("window.__cfcResetHUD && __cfcResetHUD()", completionHandler: nil)
     }
 
     private func startServerAndLoad() {
@@ -169,6 +189,7 @@ final class WebReceiverViewController: UIViewController {
 
     private func startPolling() {
         stopPolling()
+        guard enableNativeStatePolling else { return }
         pollTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.webView?.evaluateJavaScript("__cfcGetState()") { result, _ in
                 guard let json = result as? String,
