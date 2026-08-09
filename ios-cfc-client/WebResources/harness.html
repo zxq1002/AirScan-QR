@@ -225,12 +225,24 @@
     };
 
     // ── 劫持每帧的视觉状态刷新：驱动"识别到码才计时 / 丢失则暂停" ──
-    // 复用 recv.js 自带的判定：最近 30 帧（约 2s）内成功解出数据才算锁定
+    // 引入迟滞消抖 (Hysteresis Debounce) 衰减缓冲区 (1000ms)，消除手抖与屏幕闪烁导致的频繁跳变
     var origVisual=Recv.update_visual_state;
+    var _lastSuccessAt=0;
+    var HOLD_TIMEOUT_MS=1000;
+
     Recv.update_visual_state=function(){
       HUD.lastFrameAt=Date.now();
       try{origVisual.call(Recv);}catch(e){}
-      setLocked($('crosshair1').classList.contains('active_xhairs'));
+      var isActive = $('crosshair1').classList.contains('active_xhairs');
+      if (isActive) {
+        _lastSuccessAt = Date.now();
+        setLocked(true);
+      } else {
+        // 若单帧未解出，保持锁定 1000ms 衰减缓冲，超时后才判定为真正移开暂停
+        if (HUD.locked && (Date.now() - _lastSuccessAt > HOLD_TIMEOUT_MS)) {
+          setLocked(false);
+        }
+      }
     };
 
     // ── 劫持模式锁定 ──
@@ -275,7 +287,7 @@
   // 软复位：清空进度面板与计时、模式回 Auto，相机不断流，立即等待下一次识别。
   // 原生在关闭"接收完成"预览后调用，页面内也可复用。
   window.__cfcResetHUD=function(){
-    HUD.accumMs=0; HUD.segStart=0; HUD.locked=false; HUD.detail=''; HUD._lastMode=0;
+    HUD.accumMs=0; HUD.segStart=0; HUD.locked=false; HUD.detail=''; HUD._lastMode=0; _lastSuccessAt=0;
     HUD.phase = (HUD.phase==='boot') ? 'boot' : 'idle';
     setPercent(0,0); setFileName(''); setMode('');
     try{ if(window.Recv&&Recv.setMode) Recv.setMode(0); }catch(e){}   // 模式回自动探测
