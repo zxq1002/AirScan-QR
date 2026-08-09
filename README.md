@@ -60,10 +60,17 @@
 
 ## 📸 界面预览 (UI Preview)
 
-| 发送端界面 (Sender) | 接收端界面 (Receiver) |
+### 🟢 基础轻量版界面预览
+| 基础发送端界面 (Sender) | 基础接收端界面 (Receiver) |
 | :---: | :---: |
-| ![发送端](send.png) | ![接收端](receive.png) |
-| **功能**：文件切片、动态帧率调节、实时广播 | **功能**：扫码识别、分片重组、自动下载 |
+| <img src="send.png" width="400" alt="基础发送端" /> | <img src="receive.png" width="400" alt="基础接收端" /> |
+| **核心功能**：文件分片、1-30 FPS 动态帧率、单码/四码流广播 | **核心功能**：摄像头扫码、分片重组、智能补帧与自动下载 |
+
+### 🚀 高速专业版及 iOS App 界面预览
+| 高速专业版发送端<br>(网页端 `cimbar-send.jpg`) | 高速专业版网页接收端<br>(网页端 `cimbar-receive.jpg`) | 高速专业版 iOS 接收端<br>(iPhone App `cimbar-receive.ios.png`) |
+| :---: | :---: | :---: |
+| <img src="cimbar-send.png" width="380" alt="专业版发送端" /> | <img src="cimbar-receive.jpg" width="340" alt="专业版网页接收端" /> | <img src="cimbar-receive.ios.png" width="135" alt="专业版 iOS 接收端 App" /> |
+| **发送端**：4-Color 高密度色码矩阵、Zstd 二进制流压包、15 FPS 广播 | **网页接收端**：WASM + WebWorker 多线程矩阵计算与网页解码 | **iOS 客户端**：AVFoundation 硬件捕获、动态 Rank 进度与看门狗 |
 
 ---
 

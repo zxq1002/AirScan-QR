@@ -376,7 +376,41 @@
             document.getElementById('fileInfo').classList.remove('hidden');
             document.getElementById('dropZone').classList.add('hidden');
 
+            updateStartButtonState();
+        }
+
+        // 安全获取 Emscripten 导出的 WASM 函数
+        function getWasmFn(fnName) {
+            if (typeof Module === 'undefined') return null;
+            const altName = fnName.startsWith('_') ? fnName.substring(1) : '_' + fnName;
+            if (typeof Module[fnName] === 'function') return Module[fnName].bind(Module);
+            if (typeof Module[altName] === 'function') return Module[altName].bind(Module);
+            if (Module.asm && typeof Module.asm[fnName] === 'function') return Module.asm[fnName].bind(Module.asm);
+            if (Module.asm && typeof Module.asm[altName] === 'function') return Module.asm[altName].bind(Module.asm);
+            if (Module.wasmExports && typeof Module.wasmExports[fnName] === 'function') return Module.wasmExports[fnName].bind(Module.wasmExports);
+            return null;
+        }
+
+        // WASM 模块准备就绪判定（必须多核心 API 同时有效）
+        function isWasmReady() {
+            return getWasmFn('_cimbare_configure') !== null && 
+                   getWasmFn('_cimbare_init_encode') !== null && 
+                   getWasmFn('_malloc') !== null;
+        }
+
+        // 统一更新按钮状态
+        function updateStartButtonState() {
             const btn = document.getElementById('btnStart');
+            if (!btn) return;
+
+            if (!sendState.file) {
+                btn.disabled = true;
+                btn.classList.add('bg-gray-300');
+                btn.classList.remove('bg-blue-600', 'shadow-xl', 'active:scale-95');
+                btn.textContent = '🚀 选择文件后开始';
+                return;
+            }
+
             if (isWasmReady()) {
                 btn.disabled = false;
                 btn.classList.remove('bg-gray-300');
@@ -388,11 +422,6 @@
                 btn.classList.remove('bg-blue-600', 'shadow-xl', 'active:scale-95');
                 btn.textContent = '⏳ WASM 引擎载入中...';
             }
-        }
-
-        // WASM 模块准备就绪判定
-        function isWasmReady() {
-            return typeof Module !== 'undefined' && typeof Module._cimbare_configure === 'function';
         }
 
         function clearFile() {
@@ -437,7 +466,21 @@
             if (!sendState.file) return;
 
             if (!isWasmReady()) {
-                alert('⏳ Cimbar WebAssembly 引擎尚未载入完成，请稍候 2-3 秒后再试...');
+                alert('⏳ WebAssembly 解码引擎正在初始化加载中，请稍候 2-3 秒后再试...');
+                updateStartButtonState();
+                return;
+            }
+
+            const cimbare_configure = getWasmFn('_cimbare_configure');
+            const cimbare_get_aspect_ratio = getWasmFn('_cimbare_get_aspect_ratio');
+            const cimbare_init_encode = getWasmFn('_cimbare_init_encode');
+            const cimbare_encode_bufsize = getWasmFn('_cimbare_encode_bufsize');
+            const cimbare_encode = getWasmFn('_cimbare_encode');
+            const wasm_malloc = getWasmFn('_malloc');
+            const wasm_free = getWasmFn('_free');
+
+            if (!cimbare_configure || !cimbare_init_encode || !wasm_malloc || !wasm_free) {
+                alert('⏳ WebAssembly 编码函数尚未完全解析完成，请稍等片刻后再试...');
                 return;
             }
 
@@ -462,41 +505,32 @@
             // 配置编码模式
             const modeMap = { 'B': 68, 'Bm': 67, 'Bu': 66, '4C': 4 };
             try {
-                Module._cimbare_configure(modeMap[sendState.mode], -1);
+                cimbare_configure(modeMap[sendState.mode], -1);
 
                 // 获取宽高比并调整 Canvas 尺寸（关键步骤）
-                const idealRatio = Module._cimbare_get_aspect_ratio();
+                const idealRatio = cimbare_get_aspect_ratio ? cimbare_get_aspect_ratio() : 1.0;
 
                 // 根据宽高比计算合适的尺寸
-                // 原版 cimbar 的 viewport 是 1040x1040，canvas 必须至少这么大
                 let canvasWidth = 1040;
                 let canvasHeight = Math.floor(canvasWidth / idealRatio);
 
-                // 如果高度超过 1040，则以高度为基准
                 if (canvasHeight > 1040) {
                     canvasHeight = 1040;
                     canvasWidth = Math.floor(canvasHeight * idealRatio);
                 }
 
-                // 确保 canvas 尺寸不小于 viewport (1040x1040)
                 canvasWidth = Math.max(canvasWidth, 1040);
                 canvasHeight = Math.max(canvasHeight, 1040);
 
-                // 设置 Canvas 的 width/height 属性（影响 WebGL 渲染缓冲区）
                 canvas.width = canvasWidth;
                 canvas.height = canvasHeight;
 
-                // 设置 CSS 显示尺寸（控制显示大小）
                 const container = document.getElementById('encodingBox');
-                // 减去 padding 并留出额外边距，确保定位标记完整显示
                 const containerWidth = container.clientWidth - 64 || 480;
                 const containerHeight = container.clientHeight - 240 || 460;
 
-                // 让二维码尽可能大，但留出足够边距
                 const displayRatio = containerWidth / containerHeight;
                 let displayWidth, displayHeight;
-
-                // 留出 4px 边距确保定位标记不会被裁剪
                 const margin = 4;
 
                 if (displayRatio > idealRatio) {
@@ -510,33 +544,35 @@
                 canvas.style.width = displayWidth + 'px';
                 canvas.style.height = displayHeight + 'px';
 
-                console.log(`Canvas 渲染尺寸: ${canvasWidth}x${canvasHeight}, 显示尺寸: ${displayWidth}x${displayHeight}, 宽高比: ${idealRatio}`);
+                console.log(`Canvas 渲染尺寸: ${canvasWidth}x${canvasHeight}, 显示尺寸: ${displayWidth}x${displayHeight}`);
             } catch (e) {
-                console.error('配置编码模式失败:', e);
-                alert('编码初始化失败: ' + e.message);
+                console.error('配置编码模式异常:', e);
+                alert('WebAssembly 模块准备中，请稍后重试: ' + e.message);
+                sendState.isEncoding = false;
+                document.getElementById('encodingBox').classList.add('hidden');
+                updateStartButtonState();
                 return;
             }
 
             // 初始化编码会话
             const fileNameBytes = new TextEncoder('utf-8').encode(sendState.fileName);
-            const fileNamePtr = Module._malloc(fileNameBytes.length);
+            const fileNamePtr = wasm_malloc(fileNameBytes.length);
             const wasmFileName = new Uint8Array(Module.HEAPU8.buffer, fileNamePtr, fileNameBytes.length);
             wasmFileName.set(fileNameBytes);
-            Module._cimbare_init_encode(fileNamePtr, fileNameBytes.length, -1);
-            Module._free(fileNamePtr);
+            cimbare_init_encode(fileNamePtr, fileNameBytes.length, -1);
+            wasm_free(fileNamePtr);
 
             // 读取文件并编码
             const reader = new FileReader();
-            const chunkSize = Module._cimbare_encode_bufsize();
 
             reader.onload = function (e) {
                 const data = new Uint8Array(e.target.result);
-                const wasmPtr = Module._malloc(data.length);
+                const wasmPtr = wasm_malloc(data.length);
                 const wasmData = new Uint8Array(Module.HEAPU8.buffer, wasmPtr, data.length);
                 wasmData.set(data);
 
-                Module._cimbare_encode(wasmPtr, data.length);
-                Module._free(wasmPtr);
+                cimbare_encode(wasmPtr, data.length);
+                wasm_free(wasmPtr);
 
                 // 开始渲染循环
                 startRenderLoop();
@@ -809,12 +845,20 @@
         }
 
         window.onload = () => {
-            // 检查 WASM 是否加载
-            if (isWasmReady()) {
-                console.log('✅ WASM 引擎就绪');
-            } else {
-                console.warn('⏳ Cimbar WASM 模块正在异步加载中...');
-            }
+            updateStartButtonState();
+
+            // 启动高频探针轮询 WASM 准备状态（持续 10 秒）
+            let checkCount = 0;
+            const statusPoll = setInterval(() => {
+                checkCount++;
+                if (isWasmReady()) {
+                    console.log('✅ WASM 引擎已就绪！');
+                    updateStartButtonState();
+                    clearInterval(statusPoll);
+                } else if (checkCount > 40) { // 10秒后停止探针
+                    clearInterval(statusPoll);
+                }
+            }, 250);
         };
     </script>
 </body>
