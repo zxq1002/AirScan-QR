@@ -14,7 +14,13 @@
 import Foundation
 import Network
 
-final class WebReceiverServer: @unchecked Sendable {
+//  隔离说明：本模块 SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor，默认会把这个类
+//  也推成 MainActor 隔离。但它整套逻辑都跑在自己的串行队列 `queue` 上——
+//  newConnectionHandler / receive / stateUpdateHandler 全由 Network.framework
+//  在该队列回调，压根不碰主线程，而且把 HTTP 收发搬到主线程反而会和 WKWebView
+//  的解码抢 CPU。所以这里显式 nonisolated，退出默认隔离；跨线程安全由 `queue`
+//  的串行性保证，故仍标 @unchecked Sendable。
+nonisolated final class WebReceiverServer: @unchecked Sendable {
 
     enum ServerError: Error {
         case resourceNotFound
