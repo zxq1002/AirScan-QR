@@ -12,7 +12,8 @@
 * **跨设备“无协议”互传**：手机与手机之间、Android 与 iOS 之间，无需蓝牙或 WiFi，开码即传。
 * **远程桌面/VPN 穿透**：直接通过摄像头扫描远程桌面窗口中的二维码，将文件从远程服务器“拿”回本地 PC。
 * **无痕传输**：无需安装驱动，无需注册账号，所有逻辑在本地执行，不留物理痕迹。
-* **极速光速传输 (Cimbar 矩阵色码 & iOS 原生App)**：针对大文件/高吞吐传输要求，支持 4-Color 高密度图标矩阵与 WebAssembly 引擎；iPhone 手机可通过专属原生客户端 (`ios-cfc-client`) 实现高敏捷离线扫码解码。
+* **极速光速传输 (Cimbar 矩阵色码)**：针对大文件/高吞吐传输要求，支持 4-Color 高密度图标矩阵与 WebAssembly 引擎。
+* **iOS 原生App**：iPhone 手机可通过专属原生客户端 (`ios-cfc-client`) 实现高敏捷离线扫码解码，自动识别基础单码、喷泉四码和Cimbar 矩阵色码。
 
 ---
 
@@ -49,12 +50,12 @@
    - 选择文件并设定编码模式 (`B` 稳定模式 / `Bm` 改进模式 / `Bu` 高对比 / `4C` 4色高密度) 与帧率 (5-20 FPS)；
    - 点击“开始编码传输”，屏幕显示高密度 Cimbar 动态矩阵色码。
 3. **接收端操作 (iPhone iOS 原生客户端)**：
-   - 使用 iOS 原生客户端 `ios-cfc-client` 扫码；
+   - 使用 iOS 原生客户端 `ios-cfc-client` 扫码（内置通用全协议解析器，**自动识别标准单码 `airscan-basic`、喷泉码 4C `airscan-fountain` 与 Cimbar 4-Color 高速色码**）；
    - 在终端执行全自动编译部署到 iPhone：
      ```bash
      cd ios-cfc-client && ./build.sh iphone
      ```
-   - 打开应用对准发送端屏幕，内置 HUD 实时显示 Rank 进度条与传输带宽，完成后自动弹出原生文件保存与分享对话框。
+   - 打开应用对准发送端屏幕，内置 HUD 实时显示协议模式（`标准单码` / `喷泉码 4C` / `Cimbar 4C`）、Rank 进度条与传输带宽，完成后自动弹出原生文件保存与分享对话框。
 
 ---
 
@@ -90,8 +91,8 @@
 * 🗜️ **Zstd 高倍率二进制流压包**：内置 Zstd 压缩算法，对文本、代码及二进制流进行二次压包，极大缩短扫描总时间。
 * ⚙️ **WebWorker + WASM 多线程并发解码**：网页端与 iOS 端均采用 WASM + 多路 WebWorker (4 Worker 并行) 矩阵运算，无延迟并发处理像素帧。
 * 📲 **iOS 原生 WKWebView WASM 离线复用架构**：iOS 客户端使用自带的内置本地 Web Server & WKWebView 完整承载 WASM 解码引擎，实现 100% 同源高准确度解码。
-* 📊 **实时 HUD 进度与 Safe Area 避让**：动态感知条码方差 (SAD Detector)，实时显示传输 Rank 进度条、耗时与 KB/s 速率；界面完美避开刘海与灵动岛。
-* 🖼️ **原生品牌 AppIcon 与一键保存/分享**：包含基于 CFC 品牌设计的 1024x1024 高清图标，解码完成后可直接唤起 iOS 系统 Share Sheet 保存至文件或相册。
+* 📊 **实时 HUD 进度与 Safe Area 避让**：动态感知条码方差 (SAD Detector)，实时显示传输 Rank 进度条、耗时与 KB/s 速率；界面避开刘海与灵动岛。
+* 🖼️ **一键保存/分享**：解码完成后可直接唤起 iOS 系统 Share Sheet 保存至文件或相册。
 
 ---
 
@@ -148,26 +149,14 @@ python3 https_server.py
 
 ## 🏷️ 版本介绍
 
-| 分类 | 版本入口/文件名 | 核心传输原理与技术特性 | 运行与依赖环境 | 适用场景推荐 |
+| 分类 | 版本入口/文件名 | 核心传输原理与技术特性 | 运行与依赖环境 | 适用场景推荐与实测耗时 |
 | :--- | :--- | :--- | :--- | :--- |
-| **🟢 基础轻量版** | [airscan-basic.html](https://zxq1002.github.io/AirScan-QR/airscan-basic.html) | **标准单码循环播放版（基准版）**<br>基于 `qrious` 优化算法与顺序切片流水线，支持 1-30 FPS 动态帧率调节与单点补帧 | 纯前端 CDN / 离线 | 文本、日志、短代码段、通用设备扫码 |
+| **🟢 基础轻量版** | [airscan-basic.html](https://zxq1002.github.io/AirScan-QR/airscan-basic.html) | **标准单码循环播放版（基准版）**<br>基于 `qrious` 优化算法与顺序切片流水线，支持 1-30 FPS 动态帧率调节与单点补帧 | 纯前端 CDN / 离线 | 文本、日志、短代码段<br>⏱ **实测**：30KB 约 1 分 40 秒 |
 | **🟢 基础轻量版** | [airscan-basic-embedded.html](airscan-basic-embedded.html) | **标准单码离线单文件版**<br>内嵌全部依赖库，100% 零网络依赖，支持无网双击直接在浏览器打开使用 | 纯前端离线单文件 | 物理隔离无网电脑、封闭实验室 |
-| **🟢 基础轻量版** | [airscan-fountain.html](https://zxq1002.github.io/AirScan-QR/airscan-fountain.html) | **喷泉码四码同传版（LT 码）**<br>2x2 四矩阵动态二维码并行广播 + 高斯消元解码，无视乱序与掉帧，解满足额 Chunk 自动还原；支持摄像头与 PC 窗口录屏扫码 | 纯前端 CDN / 离线 | 大文件/长文本、易丢帧环境、PC 录屏扫码 |
+| **🟢 基础轻量版** | [airscan-fountain.html](https://zxq1002.github.io/AirScan-QR/airscan-fountain.html) | **喷泉码四码同传版（LT 码）**<br>2x2 四矩阵动态二维码并行广播 + 高斯消元解码，无视乱序与掉帧，解满足额 Chunk 自动还原；支持摄像头与 PC 窗口录屏扫码 | 纯前端 CDN / 离线 | 大文件/长文本、易丢帧环境<br>⏱ **实测**：50KB 约 1 分 10 秒 |
 | **🟢 基础轻量版** | [airscan-fountain-embedded.html](airscan-fountain-embedded.html) | **喷泉码四码同传离线单文件版**<br>内嵌全套 Qrious、html5-qrcode、jsQR 及 Tailwind 依赖，纯离线开箱即用 | 纯前端离线单文件 | 物理隔离极高可靠性文件传输 |
-| **🚀 高速专业版** | [cimbar-transfer.html](cimbar-transfer.html) | **Cimbar 4-Color 矩阵色码版**<br>采用高密度 4-Color 图标矩阵 + WebAssembly 引擎 + Zstd 高倍率压缩，1MB 文件约 40 秒完成。详见 [README](CIMBAR-TRANSFER-README.md) | 本地 HTTPS Server & WASM | 1MB+ 较大文件、高速高吞吐传输要求 |
-| **🚀 高速专业版** | [ios-cfc-client/](ios-cfc-client/) | **原生 iPhone (iOS) 接收端 App**<br>基于 Swift + WKWebView 复用 cimbar WASM 解码引擎，包含内置 HUD 进度、Safe Area 避让与一键保存/分享。详见 [文档](ios-cfc-client/README.md) | iOS 原生客户端 (Swift) | iPhone / iPad 手机端高敏捷扫码接收 |
-
----
-
-## 🗒 更新记录
-
-| 日期 | 模块 | 概要 |
-|------|------|------|
-| 2026-08-09 | ios-cfc-client | 完善 iOS 客户端体验：App 命名为「无网码传 / Cimbar」、同屏展示扫码与 HUD 进度、清理非必要引擎骨架 |
-| 2026-08-09 | ios-cfc-client | 实装 WKWebView 复用 cimbar WASM 真实解码架构，支持扫码轮询 HUD 实时渲染与 Safe Area 刘海避让，配齐 1024x1024 高清 AppIcon |
-| 2026-08-09 | ios-cfc-client | 新增原生 iPhone (iOS) Cimbar/CFC 客户端模块并补充配置与使用文档 |
-| 2026-08-09 | cimbar-transfer.html | 引入 Cimbar 高速传输专业版（4-Color 高密度色码 + WASM 解码 + Zstd 压缩）及智能 SSL 本地 HTTPS 服务 |
-| 2026-08-08 | airscan-fountain.html | 引入喷泉码四码同传版及离线单文件版本（感谢 @YILS-LIN 修复小文本卡死问题） |
+| **🚀 高速专业版** | [cimbar-transfer.html](https://zxq1002.github.io/AirScan-QR/cimbar-transfer.html) | **Cimbar 4-Color 矩阵色码版**<br>采用高密度 4-Color 图标矩阵 + WebAssembly 引擎 + Zstd 高倍率压缩，详见 [README](CIMBAR-TRANSFER-README.md) | GitHub Pages 直接可用 / 本地 HTTPS Server（WASM 需安全上下文） | 1MB+ 较大文件、高吞吐要求<br>⏱ **实测**：1MB 约 32 ~ 40 秒 |
+| **🚀 高速专业版** | [ios-cfc-client/](ios-cfc-client/) | **原生 iPhone (iOS) 接收端 App**<br>基于 Swift + WKWebView 复用 cimbar WASM 解码引擎，内置通用全协议解析器，支持一键保存/分享。详见 [文档](ios-cfc-client/README.md) | iOS 原生客户端 (Swift) | iPhone / iPad 手机端通用扫码接收 |
 
 ---
 

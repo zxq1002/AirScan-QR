@@ -18,36 +18,63 @@ struct MainView: View {
                 }
                 .tag(0)
 
-            VStack(spacing: 20) {
-                Image(systemName: "bolt.horizontal.circle.fill")
-                    .font(.system(size: 64))
-                    .foregroundColor(.blue)
+            ScrollView {
+                VStack(spacing: 20) {
+                    Image(systemName: "bolt.horizontal.circle.fill")
+                        .font(.system(size: 64))
+                        .foregroundColor(.blue)
 
-                Text("Cimbar / CFC 传输说明")
-                    .font(.title2)
-                    .fontWeight(.bold)
+                    Text("AirScan / CFC 传输说明")
+                        .font(.title2)
+                        .fontWeight(.bold)
 
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("复用与网页端逐字节同源的 WebAssembly 解码引擎", systemImage: "cpu")
-                    Label("引擎内嵌 libcimbar + OpenCV，喷泉码免反向链路", systemImage: "square.stack.3d.up")
-                    Label("WKWebView + 本地 HTTP 同源服务承载解码", systemImage: "safari")
-                    Label("3 个 Web Worker 并行解码，Zstd 解压还原", systemImage: "cpu.fill")
-                    Label("自动识别 B / Bm / Bu / 4C 四种模式", systemImage: "paintpalette")
-                    Label("识别到码才起表，目标丢失自动暂停计时", systemImage: "timer")
-                }
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-
-                Text("传输耗时取决于模式、帧率、光照、距离与机型。iOS 端实测：B 模式 15 FPS 下 1MB 约 32 秒；网页端参考值约 40 秒（见 CIMBAR-TRANSFER-README）。")
-                    .font(.caption)
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("支持标准单码、喷泉码 4C 与 Cimbar 全协议自动识别", systemImage: "qrcode")
+                        Label("Cimbar 走 WebAssembly + 3 Worker 并行解码与 Zstd 解压", systemImage: "cpu")
+                        Label("标准单码 / 喷泉码走内置 jsQR，全帧 + 四象限同时扫描", systemImage: "square.grid.2x2")
+                        Label("迟滞平滑消抖，扫码过程连续不跳变", systemImage: "timer")
+                        Label("目标丢失自动暂停计时，识别后恢复起表", systemImage: "pause.circle")
+                        Label("解码全程在本机完成，不联网、不上传任何数据", systemImage: "shield.checkerboard")
+                    }
+                    .font(.subheadline)
                     .foregroundColor(.secondary)
                     .padding(.horizontal)
+                    .padding(.vertical, 8)
 
-                Spacer()
+                    VStack(spacing: 8) {
+                        Text("🌐 发送端在线体验地址（需联网打开，接收端本身不联网）：")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+
+                        Link(destination: URL(string: "https://zxq1002.github.io/AirScan-QR")!) {
+                            HStack {
+                                Image(systemName: "safari.fill")
+                                Text("https://zxq1002.github.io/AirScan-QR")
+                                    .fontWeight(.bold)
+                            }
+                            .font(.footnote)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.blue.opacity(0.1))
+                            .foregroundColor(.blue)
+                            .cornerRadius(12)
+                        }
+                    }
+                    .padding(.top, 4)
+
+                    Text("⏱ 实测传输速度对比：\n• ⚡ Cimbar 高速色码：1MB 约 32 秒（iOS 端 15 FPS 实测，推荐）\n• 🌊 喷泉码 4C：50KB 约 1 分 10 秒（网页端实测）\n• 📷 标准单码：30KB 约 1 分 40 秒（网页端实测）\n\n后两项为网页端参考值，iOS 端尚未逐项实测；耗时还取决于帧率、光照、距离与机型。大文件建议优先使用 Cimbar 高速色码模式。")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+
+                    Spacer(minLength: 30)
+                }
+                .padding(.top, 30)
             }
-            .padding(.top, 40)
             .tabItem {
                 Label("关于算法", systemImage: "info.circle")
             }
