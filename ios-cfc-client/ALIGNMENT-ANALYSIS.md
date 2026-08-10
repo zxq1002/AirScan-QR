@@ -7,7 +7,9 @@
 |------|------|------|------|
 | v1.0.0 | 2026-08-08 | 周晓庆 | 初版 iOS 客户端（解码核心为占位实现） |
 | v1.1.0 | 2026-08-09 | 周晓庆 | 全面对齐网页端接收链路；**定位并移除伪造解码逻辑**；补齐计时/看门狗/背压/模式/重置；明确真实解码引擎接入点 |
+| v1.2.0 | 2026-08-09 | 周晓庆 | **路线 B 落地**：本地 HTTP 服务 + WKWebView 复用网页端 `cimbar_js.wasm`，与网页端逐字节同源 |
 | v1.3.0 | 2026-08-09 | 周晓庆 | **路线 A 骨架已整体移除**（详见下方说明）；接收端唯一实现为路线 B |
+| v1.4.0 | 2026-08-10 | 周晓庆 | 叠加标准单码 / 喷泉码 4C 通用解码器；相机与进度同屏；识别驱动计时 |
 
 > ⚠️ **路线 A 骨架已于 v1.3.0 移除。**
 > `Sources/Decoder/`（`CFCCoreDecoder` / `CFCDecoderBridge`）、`Sources/Camera/CameraManager.swift`、
@@ -40,13 +42,21 @@
 | 进度语义 | `_cimbard_get_report` JSON | ⚠️ 基于伪数据 | ✅ 字段对齐，等待真实数据源 |
 | 文件保存 | 自动下载 | 原生分享/存文件 ✅ | 同左 ✅ |
 
-> **一句话结论**：iOS 端“扫码接收异常”的**根本原因**是解码核心为伪造实现（详见 §3），其余为控制面/体验面的功能缺口。本次已把**控制面全部对齐**并让解码核心具备**接入真实引擎的正确骨架**；但要真正“收到文件”，必须链接 libcimbar 真实解码引擎（§6）。
+> 📌 上表最后一列停在 **v1.1.0（路线 A 骨架）**，其中「AVFoundation 相机采集」等描述**已不是当前实现**。
+> v1.2.0 起接收端改为路线 B：相机与解码都在 WKWebView 内（`getUserMedia` + `recv.js` + 3 Worker + WASM），
+> 与网页端同源。当前实现见 [README.md](README.md)「解码链路」。
+
+> **一句话结论（v1.1.0 当时）**：iOS 端“扫码接收异常”的**根本原因**是解码核心为伪造实现（详见 §3），其余为控制面/体验面的功能缺口。本次已把**控制面全部对齐**并让解码核心具备**接入真实引擎的正确骨架**；但要真正“收到文件”，必须链接 libcimbar 真实解码引擎（§6）。
+>
+> **✅ 后续进展（v1.2.0 起）**：该结论中的“待链接真实引擎”已通过**路线 B** 解决 —— 直接复用网页端同一份 `cimbar_js.wasm`，无需链接原生 libcimbar。真机实测 1MB 约 32 秒（15 FPS），**快于网页端参考值约 40 秒**。落地记录见 [WASM-REUSE-FEASIBILITY.md](WASM-REUSE-FEASIBILITY.md) §9。
 
 ---
 
 ## 2. 网页端接收链路（基准）
 
-网页端接收由 `recv.2026-01-20T0312.js`（主线程编排）+ `recv-worker.*.js`（4 个解码 Worker）+ libcimbar WASM 组成。
+网页端接收由 `recv.2026-01-20T0312.js`（主线程编排）+ `recv-worker.*.js`（4 个解码 Worker，见 `cimbar-transfer.html` 的 `Recv.init_ww(4)`）+ libcimbar WASM 组成。
+
+> iOS 端复用的是同一套编排，仅 Worker 数取 **3**（`harness.html` 的 `NUM_WORKERS`），以降低真机内存压力（每个 Worker 各带一份 1.9MB wasm 实例）。
 
 ```mermaid
 sequenceDiagram
@@ -88,7 +98,7 @@ sequenceDiagram
 
 ---
 
-## 3. 🔴 根因：iOS 解码核心是伪造实现
+## 3. 🔴 根因（v1.1.0 历史）：iOS 解码核心曾是伪造实现
 
 修复前的 `CFCCoreDecoder.cpp::decodeFrame` 逻辑：
 
@@ -107,7 +117,13 @@ sequenceDiagram
 
 ---
 
-## 4. iOS 接收链路（v1.1.0 对齐后）
+## 4. iOS 接收链路（v1.1.0 历史架构 · 相关文件已删除）
+
+> 🗄️ **本节与下面的 §5 均为 v1.1.0 的历史记录，描述的是已在 v1.3.0 删除的路线 A 骨架**
+> （`CameraManager` / `CFCDecoderBridge` / `CFCCoreDecoder` / `ScannerView` / `ProgressOverlayView`）。
+> 当前实际链路见 [WASM-REUSE-FEASIBILITY.md](WASM-REUSE-FEASIBILITY.md) §4 与 [README.md](README.md)「解码链路」。
+> 保留这两节是为了记录“控制面要对齐哪些行为”这份清单本身仍然有效，实现载体已换。
+
 
 ```mermaid
 sequenceDiagram
@@ -137,7 +153,7 @@ sequenceDiagram
 
 ---
 
-## 5. 本次已完成的对齐项（v1.1.0）
+## 5. 对齐项清单（v1.1.0 · 涉及文件已删除，行为要求仍有效）
 
 | # | 对齐项 | 网页端基准 | iOS 实现 | 涉及文件 |
 |---|--------|-----------|----------|----------|
@@ -155,21 +171,25 @@ sequenceDiagram
 
 ---
 
-## 6. 🟡 遗留：接入真实解码引擎（必做才能真正收到文件）
+## 6. 接入真实解码引擎的两条路线（路线 B 已采纳落地）
+
+> ✅ **现状**：项目已采纳**路线 B** 并落地，接收端唯一实现即路线 B；**路线 A 保留在本节仅作为未来做原生提速时的实现指引**，其骨架代码已于 v1.3.0 删除，不要复活。
 
 iOS 原生侧要获得与网页端**完全一致**的解码能力，需链接 **libcimbar**（[sz3/libcimbar](https://github.com/sz3/libcimbar)，MPL-2.0）。两条路线：
 
-### 路线 A：原生链接 libcimbar（推荐，性能最佳）
+### 路线 A：原生链接 libcimbar（未采纳，仅作日后提速的实现指引）
 1. 引入 `opencv2.xcframework`（解码依赖 `cv::Mat/cvtColor/UMat`，见 `cimbar_recv_js.cpp::get_rgb` 与 `Extractor`）。
 2. 将 libcimbar 的 `src/lib/{extractor,encoder,fountain,cimb_translator,compression,serialize,util}` 及 `third_party_lib/{wirehair,libcorrect,zstd,fmt,base91,intx,PicoSHA2,libpopcnt}` 编入静态库。
 3. 构建时定义宏 `CFC_LIBCIMBAR_BACKEND=1`，并提供 `cimbar_recv_js.h` 的 `cimbard_*` C 接口。本项目的 `CFCCoreDecoder.cpp` 已在 `#if CFC_LIBCIMBAR_BACKEND` 分支内按网页端同构方式调用：
    `cimbard_configure_decode → cimbard_scan_extract_decode → cimbard_fountain_decode → cimbard_get_report → cimbard_get_filename/decompress_read`。
 4. ⚠️ **像素格式转换**：iOS 摄像头输出 `BGRA`，libcimbar 接收 `RGBA(type=4)`，需在送入解码前交换 R/B 通道（或改请求 `NV12` 并走 `type=12`，与网页端偏好一致）。
 
-### 路线 B：复用网页端 WASM（字节级一致，集成成本中等）
-在 App 内嵌 `WKWebView/JavaScriptCore` 运行现有 `cimbar_js.wasm`，把帧送入 `cimbard_scan_extract_decode`。优点是解码器与网页端**完全同一份**；缺点是大帧经 JS 桥传输有性能开销，需降采样或共享内存优化。
+### 路线 B：复用网页端 WASM（✅ 已采纳并落地）
+在 App 内用 `WKWebView` 加载本地 HTTP 服务提供的 `harness.html`，运行现有 `cimbar_js.wasm`。解码器与网页端**完全同一份**。
 
-> 无论哪条路线，接入后本报告的「模式自动识别 / 进度 / 完成 / 保存」链路即可端到端打通，无需再改上层。
+关键取舍：**摄像头与 wasm 同在 WebView 内，帧数据完全不跨原生桥**，只有最终文件以 base64 回传一次 —— 因此评估初期担心的“大帧经 JS 桥搬运”开销并不存在。真机实测 1MB 约 32 秒，反而快于网页端参考值约 40 秒。详见 [WASM-REUSE-FEASIBILITY.md](WASM-REUSE-FEASIBILITY.md)。
+
+> 本报告的「模式自动识别 / 进度 / 完成 / 保存」链路已在路线 B 下端到端打通。
 
 ---
 

@@ -6,7 +6,9 @@ Cimbar 传输助手是一个基于视觉二维码的文件传输工具，通过�
 
 ## ⚡ 传输速度
 
-- **典型速度**：1MB 文件约需 **40 秒** 传输完成
+- **典型速度**：1MB 文件
+  - 网页端接收：约 **40 秒**
+  - iOS 原生客户端接收：约 **32 秒**（15 FPS 实测，见 [ios-cfc-client](ios-cfc-client/README.md)）
 - **影响因素**：
   - 摄像头质量和对焦速度
   - 光线条件
@@ -39,9 +41,15 @@ Cimbar 传输助手是一个基于视觉二维码的文件传输工具，通过�
 
 ### 📱 苹果手机 (iPhone / iPad) 作为接收端的详细指南
 
-> ⚠️ **核心注意**：iPhone 接收端**不能直接双击打开本地离线 HTML 文件**（因为 WASM 模块与 Web Worker 受到 WebKit 跨域安全限制），必须通过 **HTTPS 网页地址** 访问。
+> ✅ **首选方案：使用原生客户端 `ios-cfc-client`。**
+> 本仓库提供 iPhone 原生接收端 App（[ios-cfc-client](ios-cfc-client/README.md)），它在 App 内自带本地 HTTP 服务与 WKWebView，
+> 复用与网页端完全同一份 WASM 解码引擎，**无需电脑起 HTTPS 服务、无需同一局域网、无需信任自签证书**，
+> 并且实测比网页端接收更快（1MB 约 32 秒 vs 约 40 秒）。它还能同时自动识别标准单码与喷泉码 4C。
+> 下面的浏览器方案仅在不便安装 App 时作为备选。
 
-#### 1. 运行环境与浏览器要求
+> ⚠️ **走浏览器时的核心注意**：iPhone 上**不能直接双击打开本地离线 HTML 文件**（WASM 模块与 Web Worker 受 WebKit 同源安全限制），必须通过 **HTTPS 网页地址** 访问。
+
+#### 1. 运行环境与浏览器要求（浏览器备选方案）
 1. **启动电脑端 HTTPS 服务**：在电脑终端运行 `python3 https_server.py`（会自动智能加载证书并在 `4443` 端口启动）。
 2. **连接同一局域网**：确保 iPhone 与电脑处于同一 Wi-Fi 局域网（或 iPhone 连接电脑热点）。
 3. **推荐使用 Chrome for iOS**：在 iPhone 上的 App Store 下载 **Chrome**、**Firefox** 或 **Edge** 浏览器（避免直接使用 Safari），访问 `https://<电脑局域网IP>:4443/cimbar-transfer.html`。
@@ -190,6 +198,7 @@ A: 理论上无限制，但建议：
 包含 HTTPS 服务所需的 SSL 证书：
 - `cert.pem` - SSL 证书文件
 - `key.pem` - SSL 私钥文件
+- `generate_cert.sh` - 自签证书生成脚本（证书过期或需换 IP 时重新生成）
 
 > ⚠️ **重要**：现代浏览器要求摄像头访问必须使用 HTTPS 协议。此目录中的自签名证书用于本地开发测试。
 

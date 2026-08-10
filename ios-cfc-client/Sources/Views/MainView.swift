@@ -64,7 +64,7 @@ struct MainView: View {
                     }
                     .padding(.top, 4)
 
-                    Text("⏱ 实测传输速度对比：\n• ⚡ Cimbar 高速色码：1MB 约 32 秒（iOS 端 15 FPS 实测，推荐）\n• 🌊 喷泉码 4C：50KB 约 1 分 10 秒（网页端实测）\n• 📷 标准单码：30KB 约 1 分 40 秒（网页端实测）\n\n后两项为网页端参考值，iOS 端尚未逐项实测；耗时还取决于帧率、光照、距离与机型。大文件建议优先使用 Cimbar 高速色码模式。")
+                    Text("⏱ iOS 端实测传输速度对比：\n• ⚡ Cimbar 高速色码：1MB 约 32 秒（15 FPS，推荐）\n• 🌊 喷泉码 4C：100KB 约 50 秒\n• 📷 标准单码：30KB 约 50 秒\n\n耗时还取决于帧率、光照、距离与机型。大文件建议优先使用 Cimbar 高速色码模式。")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
