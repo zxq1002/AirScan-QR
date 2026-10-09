@@ -44,8 +44,8 @@ final class WebReceiverViewController: UIViewController {
     private func requestCameraAccess() {
         let status = AVCaptureDevice.authorizationStatus(for: .video)
         if status == .notDetermined {
-            AVCaptureDevice.requestAccess(for: .video) { granted in
-                DispatchQueue.main.async { [weak self] in
+            AVCaptureDevice.requestAccess(for: .video) { [weak self] granted in
+                DispatchQueue.main.async {
                     self?.onStatus?(granted ? "相机权限已授予" : "需要相机权限才能接收")
                 }
             }
